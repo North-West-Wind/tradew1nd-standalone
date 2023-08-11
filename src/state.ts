@@ -16,6 +16,7 @@ export function setDownloadPath(p: string) { return downloadPath = p; }
 
 var queues = new Map<string, RuntimeSoundTrack[]>();
 export function getQueues() { return queues; }
+export function setQueues(q: Map<string, RuntimeSoundTrack[]>) { return queues = q; }
 export function addQueues(...q: { name: string, tracks: RuntimeSoundTrack[] }[]) {
 	for (const queue of q)
 		queues.set(queue.name, queue.tracks);

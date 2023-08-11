@@ -57,6 +57,21 @@ html {
   background-color: rgba(79, 79, 79, 0.8);
 }
 
+.thumbnail {
+  position: relative;
+  width: 75%;
+  border-radius: 1rem;
+  transition: all .25s ease;
+}
+
+.thumbnail.paused {
+  filter: grayscale();
+}
+
+.thumbnail:hover {
+  cursor: pointer;
+}
+
 #tradew1nd-placeholder {
   margin: auto;
   display: block;
@@ -126,4 +141,31 @@ html {
 .flex-button:hover {
   cursor: pointer;
   filter: brightness(80%);
+}
+
+.playing-options {
+  left: 0;
+  top: 0;
+  padding: 0;
+  position: fixed;
+  width: 100%;
+  background-color: #121212;
+}
+
+.flex-option {
+  flex: 1;
+  margin: .5rem;
+  padding: .5rem;
+  border-radius: .5rem;
+  background-color: #00b972;
+  transition: all .25s ease;
+}
+
+.flex-option.disabled {
+  background-color: #4f4f4f;
+}
+
+.flex-option:hover {
+  filter: brightness(80%);
+  cursor: pointer;
 }
