@@ -5,12 +5,17 @@ export type ElectronBridge = {
 	onUpdateStates: (callback: ((states: { downloading?: string[], playing?: { queue: string, id: string } }) => void)) => void,
 	onUpdateOptions: (callback: ((options: { autoplay?: boolean, random?: boolean, loop?: boolean, repeat?: boolean }) => void)) => void,
 	onUpdatePaused: (callback: ((paused: boolean) => void)) => void,
+	onUpdateVolume: (callback: ((volume: number) => void)) => void,
+	onUpdateTime: (callback: ((time: number) => void)) => void,
 	requestQueues: () => void,
 	requestQueueDownload: (queue: string) => void,
 	requestStates: () => void,
-	requestPlay: (queue: string, id: string) => void,
+	requestPlay: (queue: string, id: string, seek?: number) => void,
 	setOptions: (options: { autoplay?: boolean, random?: boolean, loop?: boolean, repeat?: boolean }) => void,
 	setPaused: (paused: boolean) => void,
+	setVolume: (volume: number) => void,
+	setLocalVolume: (volume: number) => void,
+	setStartEnd: (start: number, end: number) => void,
 }
 
 export type WindowExtra = Window & typeof globalThis & { electronAPI: ElectronBridge }

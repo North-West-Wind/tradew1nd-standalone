@@ -41,3 +41,8 @@ export function setDownloading(d: string[]) { return downloading = d; }
 var playing: { queue: string, id: string };
 export function getPlaying() { return playing; }
 export function setPlaying(p: { queue: string, id: string }) { return playing = p; }
+
+// Renderer only
+var viewingTrack: RuntimeSoundTrack;
+export function getViewingTrack() { return viewingTrack; }
+export function setViewingTrack(t: RuntimeSoundTrack) { return viewingTrack = t; }

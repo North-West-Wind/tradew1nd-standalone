@@ -4,6 +4,7 @@ import ListComponent from './list';
 import { WindowExtra } from '../classes/window';
 import { setDownloading, setPlaying, setQueues } from '../state';
 import PlayerOptionsComponent from './player_options';
+import TrackProgressComponent from './track_progress';
 
 (window as WindowExtra).electronAPI.onUpdateQueues(queues => {
 	setQueues(queues);
@@ -19,6 +20,7 @@ root.render(<div className='container flex'>
 	<TrackInfoComponent />
 	<ListComponent />
 	<PlayerOptionsComponent />
+	<TrackProgressComponent />
 </div>);
 
 (window as WindowExtra).electronAPI.requestQueues();

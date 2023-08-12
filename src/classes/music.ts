@@ -6,9 +6,8 @@ export type SoundTrack = {
 	time: number;
 	volume: number;
 	thumbnail: string;
-	isLive: boolean;
-	isPastLive?: boolean;
-	spot?: string;
+	start?: number;
+	end?: number;
 }
 
 export const trackType = [

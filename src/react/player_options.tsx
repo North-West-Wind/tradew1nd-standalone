@@ -50,6 +50,7 @@ export default class PlayerOptionsComponent extends React.Component {
 			<div className={"flex-option center" + (this.state.random ? "" : " disabled")} onClick={() => this.toggleRandom()}>Random</div>
 			<div className={"flex-option center" + (this.state.loop ? "" : " disabled")} onClick={() => this.toggleLoop()}>Loop</div>
 			<div className={"flex-option center" + (this.state.repeat ? "" : " disabled")} onClick={() => this.toggleRepeat()}>Repeat</div>
+			<div className={"flex-option center red"}>Stop</div>
 		</div>
 	}
 }

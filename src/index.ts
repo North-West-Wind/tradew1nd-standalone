@@ -9,8 +9,9 @@ import winIcon from "../public/images/tradew1nd-win.png";
 import { addQueues, clearQueues, getQueues, getDownloading, setBrowser, setDataPath, setDownloadPath, setQueuePath, setMainWindow, getMainWindow, setPlaying, getPlaying } from './state';
 import { watch } from 'chokidar';
 import { RuntimeSoundTrack, SoundTrack } from './classes/music';
-import { downloadTrack, fixTrackId } from './helpers/downloader';
+import { downloadTrack } from './helpers/downloader';
 import { TradeW1ndPlayer } from './classes/player';
+import { fixTrack, saveRuntimeToQueue } from "./helpers/queue";
 
 // Path setup
 const dataPath = setDataPath(app.getPath("userData"));
@@ -72,27 +73,21 @@ const setupEvents = () => {
   function readQueues() {
     clearQueues();
     const downloaded = fs.readdirSync(downloadPath);
+    const playing = getPlaying();
     for (const file of fs.readdirSync(queuePath)) {
       if (!file.endsWith(".json")) continue;
       const tracks = <SoundTrack[]> JSON.parse(fs.readFileSync(path.resolve(queuePath, file), { encoding: "utf8" }));
       const rtTracks: RuntimeSoundTrack[] = [];
       var needFix = false;
       for (const track of tracks) {
-        needFix = !!fixTrackId(track) || needFix;
+        needFix = fixTrack(track) || needFix;
         const rtTrack = <RuntimeSoundTrack> track;
         if (downloaded.find(d => d === track.id)) rtTrack.downloaded = true;
+        if (playing?.queue === file.slice(0, -5) && playing.id === track.id) rtTrack.playing = true;
         rtTracks.push(rtTrack);
       }
-      if (needFix) fs.writeFileSync(path.resolve(queuePath, file), JSON.stringify(rtTracks.map(t => ({
-        id: t.id,
-        title: t.title,
-        url: t.url,
-        type: t.type,
-        time: t.time,
-        volume: t.volume,
-        thumbnail: t.thumbnail
-      })), null, 2));
       addQueues({ name: file.slice(0, -5), tracks: rtTracks });
+      if (needFix) saveRuntimeToQueue(file.slice(0, -5));
     }
     getMainWindow().webContents.send("update-queues", getQueues());
   }
@@ -149,16 +144,16 @@ const setupEvents = () => {
     event.sender.send("update-states", { downloading: getDownloading(), playing: getPlaying() });
     event.sender.send("update-options", { autoplay: player.autoplay, random: player.random, loop: player.loop, repeat: player.repeat });
     event.sender.send("update-paused", (player.togglingPause && !player.paused) || player.paused);
+    event.sender.send("update-volume", player.volume);
   });
 
-  ipcMain.on("request-play", async (event, queue: string, id: string) => {
+  ipcMain.on("request-play", async (event, queue: string, id: string, seek?: number) => {
     const requestId = crypto.createHash("md5").update(`${Date.now()}`).digest("hex");
     currentRequestId = requestId;
     var tracks = getQueues().get(queue);
     if (!tracks) return;
     async function play(id: string) {
       const track = tracks.find(t => t.id === id);
-      console.log(track);
       if (!track) return;
       if (!track.downloaded) {
         const file = path.resolve(downloadPath, track.id);
@@ -182,42 +177,58 @@ const setupEvents = () => {
         }
       }
 
-      player.once("play", (playerId) => {
-        if (id !== playerId) return;
+      const beforeVolume = track.volume;
+
+      const onPlay = (playerId: string) => {
+        if (track.id !== playerId) return;
         track.playing = true;
         event.sender.send("update-queues", getQueues());
         event.sender.send("update-states", { playing: setPlaying({ queue, id }) });
-      });
-  
-      await player.playId(id);
-  
-      track.playing = false;
-      event.sender.send("update-queues", getQueues());
-      event.sender.send("update-states", { playing: setPlaying(null) });
-
-      if (currentRequestId !== requestId) return;
-
-      if (player.repeat) await play(id);
-      if (player.autoplay) {
-        console.log("playing next track");
-        // Update tracks variable
-        tracks = getQueues().get(queue);
-        const index = tracks.indexOf(track);
-        console.log(index);
-        var id: string;
-        if (player.random) id = tracks[Math.floor(tracks.length * Math.random())].id; // Choose random track
-        else {
-          if (index == tracks.length - 1) {
-            if (player.loop) id = tracks[0].id;
-            else return;
-          } else id = tracks[index + 1].id;
-        }
-        console.log(id);
-        await play(id);
       }
+
+      const onFinish = async (playerId: string) => {
+        console.log("finished:", playerId, "my id:", track.id);
+        if (track.id !== playerId && playerId) return;
+        track.playing = false;
+        if (track.volume !== beforeVolume) saveRuntimeToQueue(queue);
+        else event.sender.send("update-queues", getQueues());
+
+        player.removeListener("play", onPlay);
+        player.removeListener("finish", onFinish);
+  
+        if (currentRequestId !== requestId) return;
+    
+        if (player.repeat) return await play(track.id);
+        if (player.autoplay) {
+          // Update tracks variable
+          tracks = getQueues().get(queue);
+          const index = tracks.indexOf(track);
+          var id: string;
+          if (player.random) id = tracks[Math.floor(tracks.length * Math.random())].id; // Choose random track
+          else {
+            if (index == tracks.length - 1) {
+              if (player.loop) id = tracks[0].id;
+              else return;
+            } else id = tracks[index + 1].id;
+          }
+          return await play(id);
+        }
+
+        event.sender.send("update-states", { playing: setPlaying(null) });
+      }
+
+      player.on("play", onPlay);
+      player.on("finish", onFinish);
+  
+      player.playId(track, seek);
+      seek = 0;
     }
 
     await play(id);
+  });
+
+  ipcMain.on("request-stop", (_event) => {
+
   });
 
   ipcMain.on("set-options", (event, options: { autoplay?: boolean, random?: boolean, loop?: boolean, repeat?: boolean }) => {
@@ -228,13 +239,42 @@ const setupEvents = () => {
     event.sender.send("update-options", options);
   });
 
-  ipcMain.on("set-paused", (event, paused: boolean) => {
+  ipcMain.on("set-paused", (_event, paused: boolean) => {
     if (paused) player.pause();
     else player.resume();
   });
 
+  ipcMain.on("set-volume", (_event, volume: number) => {
+    player.setVolume(volume);
+  });
+
+  ipcMain.on("set-local-volume", (event, volume: number) => {
+    const playing = getPlaying();
+    if (!playing) return;
+    const track = getQueues().get(playing.queue)?.find(t => t.id === playing.id);
+    if (track) {
+      track.volume = volume;
+      player.setVolume(player.volume, volume);
+      event.sender.send("update-queues", getQueues());
+    }
+  });
+
+  // Milliseconds
+  ipcMain.on("set-start-end", (_event, start: number, end: number) => {
+    const playing = getPlaying();
+    if (!playing) return;
+    const track = getQueues().get(playing.queue)?.find(t => t.id === playing.id);
+    if (track) {
+      track.start = start;
+      track.end = end;
+      saveRuntimeToQueue(playing.queue);
+    }
+  })
+
   player.on("pause", () => getMainWindow().webContents.send("update-paused", true));
   player.on("resume", () => getMainWindow().webContents.send("update-paused", false));
+  player.on("volume", volume => getMainWindow().webContents.send("update-volume", volume));
+  player.on("playback", time => getMainWindow().webContents.send("update-time", time));
 }
 
 const electronSettings = () => {
@@ -243,7 +283,7 @@ const electronSettings = () => {
     callback({
       responseHeaders: {
         ...details.responseHeaders,
-        'Content-Security-Policy': ['img-src https: data:']
+        'Content-Security-Policy': ['img-src http: https: data:']
       }
     })
   });

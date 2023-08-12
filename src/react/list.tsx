@@ -1,7 +1,8 @@
 import React from "react";
 import { RuntimeSoundTrack, trackType } from "../classes/music";
 import { WindowExtra } from "../classes/window";
-import { getDownloading, getPlaying } from "../state";
+import { getDownloading } from "../state";
+import { sleep } from "../helpers/misc";
 
 export default class ListComponent extends React.Component {
 	state: { queues: Map<string, RuntimeSoundTrack[]>, viewing: string | null };
@@ -26,19 +27,26 @@ export default class ListComponent extends React.Component {
 		this.setState({ viewing: null });
 	}
 
-	requestQueueDownload() {
-		(window as WindowExtra).electronAPI.requestQueueDownload(this.state.viewing);
+	requestQueueDownload(queue?: string) {
+		(window as WindowExtra).electronAPI.requestQueueDownload(queue || this.state.viewing);
 	}
 
 	requestPlay(id: string) {
 		(window as WindowExtra).electronAPI.requestPlay(this.state.viewing, id);
 	}
 
+	async requestDownloadAndPlay() {
+		const queue = this.state.viewing;
+		this.requestPlay(this.state.queues.get(queue)[0].id);
+		await sleep(3000);
+		this.requestQueueDownload(queue);
+	}
+
 	render() {
 		if (!this.state.viewing) {
 			const entries: React.ReactNode[] = [];
 			for (const [name, tracks] of this.state.queues.entries()) {
-				entries.push(<div key={name} className={"entry " + (getPlaying()?.queue === name ? "playing" : "")} onClick={() => this.setViewing(name)} style={getDownloading().includes(name) ? { animationName: "downloading", animationIterationCount: "infinite", animationDuration: "2s" } : {}}>
+				entries.push(<div key={name} className={"entry " + (tracks.some(t => t.playing) ? "playing" : (tracks.every(t => t.downloaded) ? "downloaded" : ""))} onClick={() => this.setViewing(name)} style={tracks.some(t => t.downloading) ? { animationName: "downloading", animationIterationCount: "infinite", animationDuration: "2s" } : {}}>
 					<h2>{name}</h2>
 					<h3>Tracks: {tracks.length}</h3>
 				</div>)
@@ -61,7 +69,10 @@ export default class ListComponent extends React.Component {
 				<h1 className="clickable" onClick={() => this.resetViewing()}>{"<"} {this.state.viewing}</h1>
 				<div className="flex">
 					<div className="flex-button" style={{ backgroundColor: downloading ? "#eb0400" : "#43b1fc" }} onClick={() => this.requestQueueDownload()}>{!downloading ? "Download" : "Cancel"}</div>
-					<div className="flex-button" style={{ flex: 2, backgroundColor: downloading ? "#444444" : "#59cc32" }}>Download and Play</div>
+					<div className="flex-button" style={{ flex: 2, backgroundColor: downloading ? "#444444" : "#59cc32" }} onClick={() => this.requestDownloadAndPlay()}>Download and Play</div>
+				</div>
+				<div className="flex">
+					<input type="text" className="add-track" placeholder="Soundtrack URL..." />
 				</div>
 				{entries}
 			</div>

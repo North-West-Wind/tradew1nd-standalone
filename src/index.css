@@ -8,12 +8,10 @@ html {
 }
 
 #app {
-  font-family: Preahvihear, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica,
-    Arial, sans-serif;
+  font-family: Preahvihear, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   margin: 0;
   background: rgb(89,204,50);
   background-image: linear-gradient(145deg, #59cc32, #43b1fc);
-  /*background-color: #002222;*/
   color: white;
   left: 0;
   top: 0;
@@ -66,10 +64,16 @@ html {
 
 .thumbnail.paused {
   filter: grayscale();
+  transition: all .25s ease;
 }
 
 .thumbnail:hover {
+  filter: brightness(80%);
   cursor: pointer;
+}
+
+.thumbnail.paused:hover {
+  filter: grayscale() brightness(80%);
 }
 
 #tradew1nd-placeholder {
@@ -118,6 +122,10 @@ html {
   background-color: #43b1fc;
 }
 
+.entry.playing:hover, .entry.downloaded:hover {
+  border-color: white;
+}
+
 @keyframes downloading {
   0%, 100% {
     background-color: rgba(79, 79, 79, 1);
@@ -161,6 +169,10 @@ html {
   transition: all .25s ease;
 }
 
+.flex-option.red {
+  background-color: #eb0400;
+}
+
 .flex-option.disabled {
   background-color: #4f4f4f;
 }
@@ -168,4 +180,38 @@ html {
 .flex-option:hover {
   filter: brightness(80%);
   cursor: pointer;
+}
+
+.progress {
+  left: 0;
+  bottom: 0;
+  padding: 0;
+  position: fixed;
+  width: 100%;
+  background-color: #1d327e;
+}
+
+.progress-time {
+  margin: 0 1rem;
+  text-align: center;
+  width: 10%;
+}
+
+.add-track {
+  font-family: Preahvihear, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  width: 100%;
+  margin: .5rem;
+  padding: .5rem;
+  border-radius: .5rem;
+  border-width: .25rem;
+  border-color: transparent;
+  border-style: solid;
+}
+
+.add-track:focus {
+  border-color: #59cc32;
+}
+
+.add-track:focus-visible {
+  outline: none;
 }

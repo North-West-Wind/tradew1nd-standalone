@@ -1,4 +1,3 @@
-import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import { SoundTrack } from "../classes/music";
@@ -9,16 +8,11 @@ import { StatusError } from "../classes/error";
 import { SCDL } from "@vncsprd/soundcloud-downloader";
 import { Readable } from "stream";
 import { getMP3 } from "./musescore";
+import { fixTrack } from "./queue";
 const scdl = new SCDL();
 
-export function fixTrackId(track: SoundTrack) {
-	if (!track.id)
-		return track.id = crypto.createHash("md5").update(`${track.title};${track.url}`).digest("hex");
-	return undefined;
-}
-
 export async function downloadTrack(track: SoundTrack) {
-	fixTrackId(track);
+	fixTrack(track);
 	const writeStream = fs.createWriteStream(path.resolve(getDownloadPath(), track.id));
 	switch (track.type) {
 		// YouTube
