@@ -106,7 +106,7 @@ html {
 }
 
 .entry > h3 {
-  color: gray;
+  color: #ccc;
 }
 
 .clickable:hover {
@@ -214,4 +214,27 @@ html {
 
 .add-track:focus-visible {
   outline: none;
+}
+
+ul.hidden { 
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+
+li.hidden {
+  font-family: Preahvihear, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  list-style-image: none;
+  list-style: none;
+  list-style-type: none;
+  color: white;
+}
+
+a {
+  text-decoration: none;
+  color: burlywood;
+}
+
+a:hover {
+  text-decoration: underline;
 }

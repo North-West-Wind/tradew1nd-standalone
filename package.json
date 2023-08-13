@@ -25,9 +25,11 @@
     "@electron-forge/maker-zip": "^6.3.0",
     "@electron-forge/plugin-auto-unpack-natives": "^6.3.0",
     "@electron-forge/plugin-webpack": "^6.3.0",
+    "@types/electron-json-storage": "^4.5.0",
     "@types/moment-duration-format": "^2.2.3",
     "@types/react": "^18.2.19",
     "@types/react-dom": "^18.2.7",
+    "@types/throttle": "^1.0.1",
     "@typescript-eslint/eslint-plugin": "^5.0.0",
     "@typescript-eslint/parser": "^5.0.0",
     "@vercel/webpack-asset-relocator-loader": "1.7.3",
@@ -63,7 +65,9 @@
     "rc-slider": "^10.2.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-movable": "^3.0.4",
     "speaker": "^0.5.4",
+    "throttle": "^1.0.3",
     "ytdl-core": "^4.11.5"
   },
   "build": {

@@ -15,9 +15,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	requestQueueDownload: (queue: string) => ipcRenderer.send("request-queue-download", queue),
 	requestStates: () => ipcRenderer.send("request-states"),
 	requestPlay: (queue: string, id: string, seek?: number) => ipcRenderer.send("request-play", queue, id, seek),
+	requestStop: () => ipcRenderer.send("request-stop"),
 	setOptions: (options: { autoplay?: boolean, random?: boolean, loop?: boolean, repeat?: boolean }) => ipcRenderer.send("set-options", options),
 	setPaused: (paused: boolean) => ipcRenderer.send("set-paused", paused),
 	setVolume: (volume: number) => ipcRenderer.send("set-volume", volume),
 	setLocalVolume: (volume: number) => ipcRenderer.send("set-local-volume", volume),
 	setStartEnd: (start: number, end: number) => ipcRenderer.send("set-start-end", start, end),
+	setTrackPos: (queue: string, currentPos: number, newPos: number) => ipcRenderer.send("set-track-pos", queue, currentPos, newPos),
 });

@@ -1,5 +1,5 @@
 import * as crypto from "crypto";
-import { app, BrowserWindow, ipcMain, nativeImage, session, Tray } from 'electron';
+import { app, BrowserWindow, ipcMain, nativeImage, session, shell, Tray } from 'electron';
 import * as fs from "fs";
 import * as path from "path";
 import puppeteer from 'puppeteer-core';
@@ -12,6 +12,8 @@ import { RuntimeSoundTrack, SoundTrack } from './classes/music';
 import { downloadTrack } from './helpers/downloader';
 import { TradeW1ndPlayer } from './classes/player';
 import { fixTrack, saveRuntimeToQueue } from "./helpers/queue";
+import { clamp, isBetween } from "./helpers/misc";
+import ElectronStore from "electron-store";
 
 // Path setup
 const dataPath = setDataPath(app.getPath("userData"));
@@ -20,11 +22,21 @@ if (!fs.existsSync(queuePath)) fs.mkdirSync(queuePath);
 const downloadPath = setDownloadPath(path.resolve(dataPath, "tracks"));
 if (!fs.existsSync(downloadPath)) fs.mkdirSync(downloadPath);
 
+// Electron config setup
+const storage = new ElectronStore();
+
 // Puppeteer setup
 pie.initialize(app).then(async () => setBrowser(await pie.connect(app, <any> puppeteer)));
 
 // Player setup
 const player = new TradeW1ndPlayer();
+{
+  let volume = storage.get("volume");
+  if (typeof volume !== "number") volume = 1;
+  player.setVolume((<number> volume) * 100);
+
+  player.on("volume", volume => storage.set("volume", volume));
+}
 
 // Variables
 var currentRequestId: string;
@@ -150,7 +162,7 @@ const setupEvents = () => {
   ipcMain.on("request-play", async (event, queue: string, id: string, seek?: number) => {
     const requestId = crypto.createHash("md5").update(`${Date.now()}`).digest("hex");
     currentRequestId = requestId;
-    var tracks = getQueues().get(queue);
+    const tracks = getQueues().get(queue);
     if (!tracks) return;
     async function play(id: string) {
       const track = tracks.find(t => t.id === id);
@@ -177,32 +189,30 @@ const setupEvents = () => {
         }
       }
 
+      if (player.playing) await player.finish();
+
       const beforeVolume = track.volume;
 
-      const onPlay = (playerId: string) => {
+      player.once("play", playerId => {
+        console.log("started", playerId, "my id", track.id);
         if (track.id !== playerId) return;
         track.playing = true;
         event.sender.send("update-queues", getQueues());
         event.sender.send("update-states", { playing: setPlaying({ queue, id }) });
-      }
-
-      const onFinish = async (playerId: string) => {
-        console.log("finished:", playerId, "my id:", track.id);
+      }).once("finish", playerId => {
         if (track.id !== playerId && playerId) return;
         track.playing = false;
         if (track.volume !== beforeVolume) saveRuntimeToQueue(queue);
         else event.sender.send("update-queues", getQueues());
-
-        player.removeListener("play", onPlay);
-        player.removeListener("finish", onFinish);
   
         if (currentRequestId !== requestId) return;
     
-        if (player.repeat) return await play(track.id);
+        if (player.repeat) return play(track.id);
         if (player.autoplay) {
           // Update tracks variable
-          tracks = getQueues().get(queue);
-          const index = tracks.indexOf(track);
+          const tracks = getQueues().get(queue);
+          const thisTrack = tracks.find(t => t.id === track.id);
+          const index = tracks.indexOf(thisTrack);
           var id: string;
           if (player.random) id = tracks[Math.floor(tracks.length * Math.random())].id; // Choose random track
           else {
@@ -211,14 +221,11 @@ const setupEvents = () => {
               else return;
             } else id = tracks[index + 1].id;
           }
-          return await play(id);
+          return play(id);
         }
 
         event.sender.send("update-states", { playing: setPlaying(null) });
-      }
-
-      player.on("play", onPlay);
-      player.on("finish", onFinish);
+      });
   
       player.playId(track, seek);
       seek = 0;
@@ -227,8 +234,10 @@ const setupEvents = () => {
     await play(id);
   });
 
-  ipcMain.on("request-stop", (_event) => {
-
+  ipcMain.on("request-stop", (event) => {
+    currentRequestId = undefined;
+    player.finish();
+    event.sender.send("update-states", { playing: setPlaying(null) });
   });
 
   ipcMain.on("set-options", (event, options: { autoplay?: boolean, random?: boolean, loop?: boolean, repeat?: boolean }) => {
@@ -253,8 +262,8 @@ const setupEvents = () => {
     if (!playing) return;
     const track = getQueues().get(playing.queue)?.find(t => t.id === playing.id);
     if (track) {
-      track.volume = volume;
-      player.setVolume(player.volume, volume);
+      track.volume = clamp(volume / 100, 0, 2);
+      player.setVolume(player.volume * 100, volume);
       event.sender.send("update-queues", getQueues());
     }
   });
@@ -269,12 +278,26 @@ const setupEvents = () => {
       track.end = end;
       saveRuntimeToQueue(playing.queue);
     }
-  })
+  });
+
+  ipcMain.on("set-track-pos", (_event, queue: string, currentPos: number, newPos: number) => {
+    const tracks = getQueues().get(queue);
+    if (!tracks || !isBetween(currentPos, 0, tracks.length - 1) || !isBetween(newPos, 0, tracks.length - 1)) return;
+    const track = tracks.splice(currentPos, 1);
+    getQueues().set(queue, tracks.slice(0, newPos).concat(track, tracks.slice(newPos)));
+    saveRuntimeToQueue(queue);
+  });
 
   player.on("pause", () => getMainWindow().webContents.send("update-paused", true));
   player.on("resume", () => getMainWindow().webContents.send("update-paused", false));
   player.on("volume", volume => getMainWindow().webContents.send("update-volume", volume));
   player.on("playback", time => getMainWindow().webContents.send("update-time", time));
+
+  getMainWindow().webContents.on('will-navigate', (details) => {
+    if (getMainWindow().webContents.getURL() == details.url) return;
+    details.preventDefault();
+    shell.openExternal(details.url);
+  });
 }
 
 const electronSettings = () => {

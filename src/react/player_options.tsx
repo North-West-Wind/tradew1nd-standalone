@@ -43,6 +43,10 @@ export default class PlayerOptionsComponent extends React.Component {
 		(window as WindowExtra).electronAPI.setOptions(options);
 	}
 
+	stop() {
+		(window as WindowExtra).electronAPI.requestStop();
+	}
+
 	render() {
 		if (!this.state.enabled) return;
 		return <div className="playing-options flex">
@@ -50,7 +54,7 @@ export default class PlayerOptionsComponent extends React.Component {
 			<div className={"flex-option center" + (this.state.random ? "" : " disabled")} onClick={() => this.toggleRandom()}>Random</div>
 			<div className={"flex-option center" + (this.state.loop ? "" : " disabled")} onClick={() => this.toggleLoop()}>Loop</div>
 			<div className={"flex-option center" + (this.state.repeat ? "" : " disabled")} onClick={() => this.toggleRepeat()}>Repeat</div>
-			<div className={"flex-option center red"}>Stop</div>
+			<div className={"flex-option center red"} onClick={() => this.stop()}>Stop</div>
 		</div>
 	}
 }

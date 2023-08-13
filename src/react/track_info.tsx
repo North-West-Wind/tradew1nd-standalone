@@ -36,7 +36,6 @@ export default class TrackInfoComponent extends React.Component {
 	}
 
 	togglePause() {
-		console.log("next paused state", !this.state.paused);
 		(window as WindowExtra).electronAPI.setPaused(!this.state.paused);
 	}
 
@@ -67,17 +66,18 @@ export default class TrackInfoComponent extends React.Component {
 				<div className="flex-child center">
 					<img src={this.state.track.thumbnail} className={"thumbnail" + (this.state.paused ? " paused" : "")} onClick={() => this.togglePause()} /><br/>
 					<h2>{this.state.track.title}</h2>
+					<h3><a href={this.state.track.url}>{this.state.track.url}</a></h3>
 					<div>
 						<span style={{ float: "left" }}>Play from {moment.utc(this.state.track.start || 0).format("HH:mm:ss.SSS")} to {moment.utc(this.state.track.end || this.state.track.time * 1000).format("HH:mm:ss.SSS")}</span>
 						<Slider range allowCross={false} max={this.state.track.time * 1000} value={[this.state.track.start || 0, this.state.track.end || this.state.track.time * 1000]} style={{ float: "right" }} onChange={(t: number[]) => this.setStartEnd(t[0], t[1])} onAfterChange={(t: number[]) => this.actualSetStartEnd(t[0], t[1])} />
 					</div>
 					<div>
 						<span style={{ float: "left" }}>Global: {Math.round(this.state.volume * 100)}%</span>
-						<Slider max={200} defaultValue={Math.round(this.state.volume * 100)} style={{ float: "right" }} onChange={(v: number) => this.setVolume(v)} />
+						<Slider max={200} value={Math.round(this.state.volume * 100)} style={{ float: "right" }} onChange={(v: number) => this.setVolume(v)} />
 					</div>
 					<div>
 						<span style={{ float: "left" }}>File: {Math.round(this.state.track.volume * 100)}%</span>
-						<Slider max={200} defaultValue={Math.round(this.state.track.volume * 100)} style={{ float: "right" }} onChange={(v: number) => this.setLocalVolume(v)} />
+						<Slider max={200} value={Math.round(this.state.track.volume * 100)} style={{ float: "right" }} onChange={(v: number) => this.setLocalVolume(v)} />
 					</div>
 				</div>
 			}

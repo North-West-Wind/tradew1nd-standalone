@@ -10,6 +10,7 @@ import { clamp, sleep } from "../helpers/misc";
 import moment from "moment";
 import "moment-duration-format";
 import { RuntimeSoundTrack } from "./music";
+import Throttle from "throttle";
 
 type PlayerEvents = "play" | "finish";
 type PlaybackEvents = "pause" | "paused" | "resume" | "resumed";
@@ -28,10 +29,12 @@ export declare interface TradeW1ndPlayer {
 }
 
 export class TradeW1ndPlayer extends EventEmitter {
+	static readonly BITRATE = 192000;
+
 	// Internal
-	private stream?: Stream.Readable;
+	private stream?: VolumeTransformer;
 	private speaker?: Speaker;
-	private volumeTransformer?: VolumeTransformer;
+	private throttle?: Throttle;
 	private playbackTime = 0;
 	private pausedTime = 0;
 	private startTime = 0;
@@ -57,17 +60,17 @@ export class TradeW1ndPlayer extends EventEmitter {
 		const file = path.resolve(getDownloadPath(), track.id);
 		if (!fs.existsSync(file)) throw new Error("Cannot find " + file);
 
-		if (this.playing) await this.finish(track.id);
+		console.log("Playing from", file);
 
 		this.metadata = await parseFile(file);
 		if (this.metadata.format.duration && this.metadata.format.duration != track.time) track.time = this.metadata.format.duration;
-		console.log("seek", seek);
 		if ((seek / 1000) > this.metadata.format.duration) seek = 0;
 		if (seek > track.time * 1000) return;
 		if (!seek) seek = track.start || 0;
 		this.localVolume = track.volume;
-		this.volumeTransformer = new VolumeTransformer({ type: "s16le", volume: this.volume * this.localVolume });
-		this.stream = this.decodeStream(fs.createReadStream(file, { highWaterMark: 1024 }), seek, track.end || 0).on("error", console.error).pipe(this.volumeTransformer);
+		this.stream = this.decodeStream(fs.createReadStream(file), seek, track.end || 0).on("error", err => console.error("Input error", err)).pipe(new VolumeTransformer({ type: "s16le", volume: 1 }));
+		this.stream.setVolumeLogarithmic(this.volume * this.localVolume);
+		this.throttle = new Throttle({ bps: this.metadata.format?.bitrate || TradeW1ndPlayer.BITRATE });
     this.speaker = new Speaker({ sampleRate: this.metadata.format?.sampleRate || 44100, channels: this.metadata.format?.numberOfChannels || 2 });
 
 		this.playing = true;
@@ -83,12 +86,15 @@ export class TradeW1ndPlayer extends EventEmitter {
 		}, 1);
 		this.speaker
 			.once("finish", () => this.finish(track.id))
-			.on("error", console.error)
+			.on("error", err => console.error("Speaker error", err));
+		this.throttle
 			.on("pipe", () => this.updatePlayback = true)
-			.on("unpipe", () => this.updatePlayback = false);
-		this.stream
-			.on("error", console.error)
+			.on("unpipe", () => this.updatePlayback = false)
+			.on("error", err => console.error("Throttle error", err))
 			.pipe(this.speaker);
+		this.stream
+			.on("error", err => console.error("Volume error", err))
+			.pipe(this.throttle);
 	}
 
 	decodeStream(stream: Stream.Readable, start: number, end: number) {
@@ -98,6 +104,7 @@ export class TradeW1ndPlayer extends EventEmitter {
 			'-f', 's16le',
 			'-ar', `${this.metadata.format?.sampleRate || 44100}`,
 			'-ac', `${this.metadata.format?.numberOfChannels || 2}`,
+			'-b:a', (this.metadata.format?.bitrate || TradeW1ndPlayer.BITRATE) * 0.001 + 'k'
 		];
 		if (start > 0) args.push('-ss', moment.duration(start, "ms").format("HH:mm:ss.SSS"));
 		if (end > 0) args.push("-t", moment.duration(end - start, "ms").format("HH:mm:ss.SSS"));
@@ -112,56 +119,59 @@ export class TradeW1ndPlayer extends EventEmitter {
 				this.speaker.on("close", res);
 				this.speaker.close(true);
 			});
-		this.stream?.destroy();
-		this.volumeTransformer?.destroy();
-		this.speaker = undefined;
+		this.throttle?.end();
+		this.stream?.end();
+		this.stream?.removeAllListeners();
+		this.throttle?.removeAllListeners();
+		this.speaker?.removeAllListeners();
 		this.stream = undefined;
-		this.volumeTransformer = undefined;
+		this.throttle = undefined;
+		this.speaker = undefined;
 		clearInterval(this.interval);
 		this.interval = undefined;
 		this.playbackTime = this.startTime = this.pausedTime = this.startPausedTime = 0;
-		this.playing = false;
 		this.paused = false;
 		this.togglingPause = false;
-		this.emit("finish", id);
+		if (this.playing) {
+			this.playing = false;
+			this.emit("finish", id);
+		}
 	}
 
 	async pause() {
 		if (!this.playing || this.paused || this.togglingPause) return;
-		this.togglingPause = true;
+		//this.togglingPause = true;
 		this.emit("pause");
-		while (this.volumeTransformer.volumeLogarithmic > 0) {
-			this.volumeTransformer.setVolumeLogarithmic(clamp(this.volumeTransformer.volumeLogarithmic - 0.02, 0, Infinity));
+		/*while (this.stream.volumeLogarithmic > 0) {
+			this.stream.setVolumeLogarithmic(clamp(this.stream.volumeLogarithmic - 0.02, 0, Infinity));
 			await sleep(10);
-			console.log(this.volumeTransformer.volumeLogarithmic);
-		}
+		}*/
 		this.stream.unpipe();
 		this.startPausedTime = Date.now();
 		this.paused = true;
-		this.togglingPause = false;
-		this.emit("paused");
+		//this.togglingPause = false;
+		//this.emit("paused");
 	}
 
 	async resume() {
 		if (!this.playing || !this.paused || this.togglingPause) return;
-		this.togglingPause = true;
+		//this.togglingPause = true;
 		this.emit("resume");
 		this.pausedTime += Date.now() - this.startPausedTime;
-		this.stream.pipe(this.speaker);
-		while (this.volumeTransformer.volumeLogarithmic < this.volume * this.localVolume) {
-			this.volumeTransformer.setVolumeLogarithmic(clamp(this.volumeTransformer.volumeLogarithmic + 0.02, 0, this.volume * this.localVolume));
+		this.stream.pipe(this.throttle);
+		/*while (this.stream.volumeLogarithmic < this.volume * this.localVolume) {
+			this.stream.setVolumeLogarithmic(clamp(this.stream.volumeLogarithmic + 0.02, 0, this.volume * this.localVolume));
 			await sleep(10);
-			console.log(this.volumeTransformer.volumeLogarithmic);
-		}
+		}*/
 		this.paused = false;
-		this.togglingPause = false;
-		this.emit("resumed");
+		//this.togglingPause = false;
+		//this.emit("resumed");
 	}
 
 	setVolume(volume: number, localVolume = 100) {
 		this.volume = clamp(volume / 100, 0, 2);
 		this.localVolume = clamp(localVolume / 100, 0, 2);
-		this.volumeTransformer?.setVolumeLogarithmic(this.volume * this.localVolume);
+		this.stream?.setVolumeLogarithmic(this.volume * this.localVolume);
 		this.emit("volume", this.volume);
 	}
 }

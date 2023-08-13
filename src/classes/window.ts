@@ -11,11 +11,13 @@ export type ElectronBridge = {
 	requestQueueDownload: (queue: string) => void,
 	requestStates: () => void,
 	requestPlay: (queue: string, id: string, seek?: number) => void,
+	requestStop: () => void,
 	setOptions: (options: { autoplay?: boolean, random?: boolean, loop?: boolean, repeat?: boolean }) => void,
 	setPaused: (paused: boolean) => void,
 	setVolume: (volume: number) => void,
 	setLocalVolume: (volume: number) => void,
 	setStartEnd: (start: number, end: number) => void,
+	setTrackPos: (queue: string, currentPos: number, newPos: number) => void,
 }
 
 export type WindowExtra = Window & typeof globalThis & { electronAPI: ElectronBridge }

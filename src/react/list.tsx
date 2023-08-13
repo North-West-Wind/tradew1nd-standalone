@@ -3,13 +3,14 @@ import { RuntimeSoundTrack, trackType } from "../classes/music";
 import { WindowExtra } from "../classes/window";
 import { getDownloading } from "../state";
 import { sleep } from "../helpers/misc";
+import { List } from "react-movable";
 
 export default class ListComponent extends React.Component {
-	state: { queues: Map<string, RuntimeSoundTrack[]>, viewing: string | null };
+	state: { queues: Map<string, RuntimeSoundTrack[]>, viewing: string | null, rearrange: boolean };
 
 	constructor(props: any) {
 		super(props);
-		this.state = { queues: new Map(), viewing: null };
+		this.state = { queues: new Map(), viewing: null, rearrange: false };
 
 		(window as WindowExtra).electronAPI.onUpdateQueues(queues => {
 			if (queues.has(this.state.viewing)) this.setState({ queues });
@@ -17,6 +18,10 @@ export default class ListComponent extends React.Component {
 		});
 		(window as WindowExtra).electronAPI.requestQueues();
 		(window as WindowExtra).electronAPI.onUpdateStates(() => this.forceUpdate());
+	}
+
+	changePos(currentPos: number, newPos: number) {
+		(window as WindowExtra).electronAPI.setTrackPos(this.state.viewing, currentPos, newPos);
 	}
 
 	setViewing(name: string) {
@@ -42,6 +47,10 @@ export default class ListComponent extends React.Component {
 		this.requestQueueDownload(queue);
 	}
 
+	toggleRearrange() {
+		this.setState({ rearrange: !this.state.rearrange });
+	}
+
 	render() {
 		if (!this.state.viewing) {
 			const entries: React.ReactNode[] = [];
@@ -60,7 +69,6 @@ export default class ListComponent extends React.Component {
 			for (const track of this.state.queues.get(this.state.viewing)!) {
 				entries.push(<div key={track.id} className={"entry " + (track.playing ? "playing" : (track.downloaded ? "downloaded" : ""))} style={track.downloading ? { animationName: "downloading", animationIterationCount: "infinite", animationDuration: "2s" } : {}} onClick={() => this.requestPlay(track.id)}>
 					<h2>{track.title}</h2>
-					<h3>{track.url}</h3>
 					<h3>{trackType[track.type]}</h3>
 				</div>)
 			}
@@ -74,7 +82,21 @@ export default class ListComponent extends React.Component {
 				<div className="flex">
 					<input type="text" className="add-track" placeholder="Soundtrack URL..." />
 				</div>
-				{entries}
+				<div className="flex center">
+					<div className={"flex-option " + (!this.state.rearrange ? "disabled" : "")} onClick={() => this.toggleRearrange()}>Rearrange</div>
+				</div>
+				{this.state.rearrange && <List
+					values={this.state.queues.get(this.state.viewing)}
+					onChange={({ oldIndex, newIndex }) => this.changePos(oldIndex, newIndex)}
+					renderList={({ children, props }) => <ul className="hidden" {...props}>{children}</ul>}
+					renderItem={({ value: track, props }) => <li className="hidden" {...props}>
+						<div key={track.id} className={"entry " + (track.playing ? "playing" : (track.downloaded ? "downloaded" : ""))} style={track.downloading ? { animationName: "downloading", animationIterationCount: "infinite", animationDuration: "2s" } : {}} onClick={() => this.requestPlay(track.id)}>
+							<h2>{track.title}</h2>
+							<h3>{trackType[track.type]}</h3>
+						</div>
+					</li>}
+				/>}
+				{!this.state.rearrange && entries}
 			</div>
 		}
 	}
