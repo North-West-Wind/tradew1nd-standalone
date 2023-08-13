@@ -70,7 +70,7 @@ export class TradeW1ndPlayer extends EventEmitter {
 		this.localVolume = track.volume;
 		this.stream = this.decodeStream(fs.createReadStream(file), seek, track.end || 0).on("error", err => console.error("Input error", err)).pipe(new VolumeTransformer({ type: "s16le", volume: 1 }));
 		this.stream.setVolumeLogarithmic(this.volume * this.localVolume);
-		this.throttle = new Throttle({ bps: this.metadata.format?.bitrate || TradeW1ndPlayer.BITRATE });
+		this.throttle = new Throttle({ bps: TradeW1ndPlayer.BITRATE });
     this.speaker = new Speaker({ sampleRate: this.metadata.format?.sampleRate || 44100, channels: this.metadata.format?.numberOfChannels || 2 });
 
 		this.playing = true;
@@ -104,7 +104,7 @@ export class TradeW1ndPlayer extends EventEmitter {
 			'-f', 's16le',
 			'-ar', `${this.metadata.format?.sampleRate || 44100}`,
 			'-ac', `${this.metadata.format?.numberOfChannels || 2}`,
-			'-b:a', (this.metadata.format?.bitrate || TradeW1ndPlayer.BITRATE) * 0.001 + 'k'
+			'-b:a', TradeW1ndPlayer.BITRATE * 0.001 + 'k'
 		];
 		if (start > 0) args.push('-ss', moment.duration(start, "ms").format("HH:mm:ss.SSS"));
 		if (end > 0) args.push("-t", moment.duration(end - start, "ms").format("HH:mm:ss.SSS"));

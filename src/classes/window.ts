@@ -12,6 +12,8 @@ export type ElectronBridge = {
 	requestStates: () => void,
 	requestPlay: (queue: string, id: string, seek?: number) => void,
 	requestStop: () => void,
+	requestChooseFile: () => void,
+	returnChooseFile: (callback: ((paths: undefined | string[]) => void)) => void,
 	setOptions: (options: { autoplay?: boolean, random?: boolean, loop?: boolean, repeat?: boolean }) => void,
 	setPaused: (paused: boolean) => void,
 	setVolume: (volume: number) => void,

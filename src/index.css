@@ -216,6 +216,11 @@ html {
   outline: none;
 }
 
+div.add-track {
+  background-color: #e5ae0a;
+  text-align: center;
+}
+
 ul.hidden { 
   list-style-type: none;
   margin: 0;

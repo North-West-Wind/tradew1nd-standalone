@@ -1,5 +1,5 @@
 import * as crypto from "crypto";
-import { app, BrowserWindow, ipcMain, nativeImage, session, shell, Tray } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, nativeImage, session, shell, Tray } from 'electron';
 import * as fs from "fs";
 import * as path from "path";
 import puppeteer from 'puppeteer-core';
@@ -194,7 +194,6 @@ const setupEvents = () => {
       const beforeVolume = track.volume;
 
       player.once("play", playerId => {
-        console.log("started", playerId, "my id", track.id);
         if (track.id !== playerId) return;
         track.playing = true;
         event.sender.send("update-queues", getQueues());
@@ -238,6 +237,15 @@ const setupEvents = () => {
     currentRequestId = undefined;
     player.finish();
     event.sender.send("update-states", { playing: setPlaying(null) });
+  });
+
+  ipcMain.on("request-choose-file", async (event) => {
+    const result = await dialog.showOpenDialog({ properties: ['openFile', 'multiSelections'], filters: [{ name: "Music Files", extensions: ["*"] }] });
+    event.sender.send("return-choose-file", result.canceled ? undefined : result.filePaths);
+  });
+
+  ipcMain.on("request-add-track", async (event, uri: string) => {
+
   });
 
   ipcMain.on("set-options", (event, options: { autoplay?: boolean, random?: boolean, loop?: boolean, repeat?: boolean }) => {

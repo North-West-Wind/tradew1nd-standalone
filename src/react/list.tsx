@@ -6,11 +6,11 @@ import { sleep } from "../helpers/misc";
 import { List } from "react-movable";
 
 export default class ListComponent extends React.Component {
-	state: { queues: Map<string, RuntimeSoundTrack[]>, viewing: string | null, rearrange: boolean };
+	state: { queues: Map<string, RuntimeSoundTrack[]>, viewing: string | null, rearrange: boolean, waitingFiles: boolean, paths: string[] };
 
 	constructor(props: any) {
 		super(props);
-		this.state = { queues: new Map(), viewing: null, rearrange: false };
+		this.state = { queues: new Map(), viewing: null, rearrange: false, waitingFiles: false, paths: undefined };
 
 		(window as WindowExtra).electronAPI.onUpdateQueues(queues => {
 			if (queues.has(this.state.viewing)) this.setState({ queues });
@@ -18,6 +18,10 @@ export default class ListComponent extends React.Component {
 		});
 		(window as WindowExtra).electronAPI.requestQueues();
 		(window as WindowExtra).electronAPI.onUpdateStates(() => this.forceUpdate());
+		(window as WindowExtra).electronAPI.returnChooseFile(paths => {
+			if (paths) this.setState({ paths });
+			this.setState({ waitingFiles: false });
+		});
 	}
 
 	changePos(currentPos: number, newPos: number) {
@@ -38,6 +42,11 @@ export default class ListComponent extends React.Component {
 
 	requestPlay(id: string) {
 		(window as WindowExtra).electronAPI.requestPlay(this.state.viewing, id);
+	}
+
+	requestChooseFile() {
+		(window as WindowExtra).electronAPI.requestChooseFile();
+		this.setState({ waitingFiles: true, paths: undefined });
 	}
 
 	async requestDownloadAndPlay() {
@@ -80,7 +89,8 @@ export default class ListComponent extends React.Component {
 					<div className="flex-button" style={{ flex: 2, backgroundColor: downloading ? "#444444" : "#59cc32" }} onClick={() => this.requestDownloadAndPlay()}>Download and Play</div>
 				</div>
 				<div className="flex">
-					<input type="text" className="add-track" placeholder="Soundtrack URL..." />
+					<input type="text" className="add-track" style={{ flex: 3 }} placeholder="Soundtrack URL..." value={this.state.paths ? JSON.stringify(this.state.paths) : undefined} />
+					<div className={"add-track flex-option " + (this.state.waitingFiles ? "disabled" : "")} style={{ flex: 1 }} onClick={() => this.requestChooseFile()}>Add File</div>
 				</div>
 				<div className="flex center">
 					<div className={"flex-option " + (!this.state.rearrange ? "disabled" : "")} onClick={() => this.toggleRearrange()}>Rearrange</div>

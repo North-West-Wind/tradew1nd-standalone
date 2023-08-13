@@ -48,6 +48,7 @@
   },
   "dependencies": {
     "@vncsprd/soundcloud-downloader": "^1.2.2",
+    "cheerio": "^1.0.0-rc.12",
     "chokidar": "^3.5.3",
     "electron-json-storage": "^4.6.0",
     "electron-serve": "^1.1.0",
@@ -56,6 +57,7 @@
     "ffmpeg-static": "^5.1.0",
     "moment": "^2.29.4",
     "moment-duration-format": "^2.3.2",
+    "musescore-metadata": "^2.1.2",
     "music-metadata": "^8.1.4",
     "node-fetch": "^3.3.2",
     "node-opus": "^0.3.3",
@@ -68,7 +70,8 @@
     "react-movable": "^3.0.4",
     "speaker": "^0.5.4",
     "throttle": "^1.0.3",
-    "ytdl-core": "^4.11.5"
+    "ytdl-core": "^4.11.5",
+    "ytpl": "^2.3.0"
   },
   "build": {
     "files": [

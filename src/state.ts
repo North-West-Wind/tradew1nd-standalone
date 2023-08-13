@@ -42,6 +42,10 @@ var playing: { queue: string, id: string };
 export function getPlaying() { return playing; }
 export function setPlaying(p: { queue: string, id: string }) { return playing = p; }
 
+var adding: string | RuntimeSoundTrack | number | undefined;
+export function getAdding() { return adding; }
+export function setAdding(a: string | RuntimeSoundTrack | number | undefined) { return adding = a; }
+
 // Renderer only
 var viewingTrack: RuntimeSoundTrack;
 export function getViewingTrack() { return viewingTrack; }

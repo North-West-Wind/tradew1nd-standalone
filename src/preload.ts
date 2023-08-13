@@ -16,6 +16,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	requestStates: () => ipcRenderer.send("request-states"),
 	requestPlay: (queue: string, id: string, seek?: number) => ipcRenderer.send("request-play", queue, id, seek),
 	requestStop: () => ipcRenderer.send("request-stop"),
+	requestChooseFile: () => ipcRenderer.send("request-choose-file"),
+	returnChooseFile: (callback: ((paths: undefined | string[]) => {})) => ipcRenderer.on("return-choose-file", (_e, p) => callback(p)),
 	setOptions: (options: { autoplay?: boolean, random?: boolean, loop?: boolean, repeat?: boolean }) => ipcRenderer.send("set-options", options),
 	setPaused: (paused: boolean) => ipcRenderer.send("set-paused", paused),
 	setVolume: (volume: number) => ipcRenderer.send("set-volume", volume),
