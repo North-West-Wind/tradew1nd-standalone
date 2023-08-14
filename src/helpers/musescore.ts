@@ -21,7 +21,7 @@ export async function getMP3(url: string): Promise<{ error: boolean, url: string
 			});
 			result.url = mp3.url();
 			result.error = false;
-		} catch (err: any) {
+		} catch (err) {
 			result.message = err.message;
 		}
 		result.timeTaken = Date.now() - start;

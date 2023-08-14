@@ -1,9 +1,8 @@
-import * as cheerio from "cheerio";
 import * as fs from "fs";
 import * as path from "path";
 import Stream from "stream";
 import { RuntimeSoundTrack, SoundTrack } from "../classes/music";
-import { getDownloadPath, getPlaying, getQueues } from "../state";
+import { getDownloadPath, getQueues } from "../state";
 import ytdl from "ytdl-core";
 import fetch from "node-fetch";
 import { ActualError, StatusError } from "../classes/error";
@@ -13,7 +12,7 @@ import { getMP3 } from "./musescore";
 import { fixTrack } from "./queue";
 import ytpl from "ytpl";
 import { decodeHtmlEntity, humanDurationToNum } from "./misc";
-import { validGDDLURL, validGDFolderURL, validGDURL, validMSSetURL, validMSURL, validSCURL, validURL, validYTPlaylistURL, validYTURL } from "./validator";
+import { validMSSetURL, validMSURL, validSCURL, validURL, validYTPlaylistURL, validYTURL } from "./validator";
 import { parseFile, parseStream } from "music-metadata";
 import { museSet, muse } from "musescore-metadata";
 const scdl = new SCDL();
@@ -36,7 +35,8 @@ export async function downloadTrack(track: SoundTrack) {
 			break;
 		// SoundCloud
 		case 3:
-			await new Promise(async (res, rej) => (<Readable>await scdl.download(track.url)).pipe(writeStream).on("close", res).on("error", rej));
+			const stream = <Readable>await scdl.download(track.url);
+			await new Promise((res, rej) => stream.pipe(writeStream).on("close", res).on("error", rej));
 			break;
 		// Musescore
 		case 5:
@@ -69,7 +69,7 @@ export async function addTrack(queue: string, url: string) {
 	if (urls.length == 1) return await addSingleTrack(queue, urls[0]);
 	var counter = 0;
 	for (const path of urls)
-		if (!!(await addSingleTrack(queue, path)))
+		if (await addSingleTrack(queue, path))
 			counter++;
 	return counter;
 
@@ -187,7 +187,7 @@ async function addSCURL(link: string) {
 async function addMSSetURL(link: string) {
 	try {
 		var data = await museSet(link, { all: true });
-	} catch (err: any) {
+	} catch (err) {
 		return undefined;
 	}
 	return <SoundTrack[]> data.scores.map(score => ({ title: score.title, url: score.url, type: 5, time: humanDurationToNum(score.duration), volume: 1, thumbnail: "http://s.musescore.org/about/images/musescore-mu-logo-bluebg-xl.png" }));
@@ -195,7 +195,7 @@ async function addMSSetURL(link: string) {
 async function addMSURL(link: string) {
 	try {
 		var data = await muse(link);
-	} catch (err: any) {
+	} catch (err) {
 		return undefined;
 	}
 	const song: SoundTrack = {
@@ -214,7 +214,7 @@ async function addURL(link: string) {
 		var stream = <Stream.Readable>await fetch(link).then(res => res.body);
 		var metadata = await parseStream(stream, {}, { duration: true });
 		if (metadata.format.trackInfo && metadata.format.trackInfo[0]?.name) title = metadata.format.trackInfo[0].name;
-	} catch (err: any) {
+	} catch (err) {
 		return undefined;
 	}
 	if (!metadata || !stream) return undefined;
@@ -235,7 +235,7 @@ async function addFile(url: string) {
 		var stream = fs.createReadStream(url);
 		var metadata = await parseFile(url, { duration: true });
 		if (metadata.format.trackInfo && metadata.format.trackInfo[0]?.name) title = metadata.format.trackInfo[0].name;
-	} catch (err: any) {
+	} catch (err) {
 		return undefined;
 	}
 	if (!metadata || !stream) return undefined;

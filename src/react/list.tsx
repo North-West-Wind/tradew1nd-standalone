@@ -1,7 +1,6 @@
 import React from "react";
 import { RuntimeSoundTrack, trackType } from "../classes/music";
 import { WindowExtra } from "../classes/window";
-import { getDownloading } from "../state";
 import { sleep } from "../helpers/misc";
 import { List } from "react-movable";
 
@@ -22,7 +21,7 @@ export default class ListComponent extends React.Component {
 		showDisabled: boolean
 	};
 
-	constructor(props: any) {
+	constructor(props: {}) {
 		super(props);
 		this.state = {
 			queues: new Map(),

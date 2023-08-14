@@ -1,6 +1,7 @@
 import pie from "puppeteer-in-electron";
 import { getBrowser } from '../state';
 import { BrowserWindow } from "electron";
+import { Page } from "puppeteer-core";
 let subWin: BrowserWindow, timeout: NodeJS.Timeout;
 
 function getSubWindow() {
@@ -8,7 +9,7 @@ function getSubWindow() {
 	return subWin;
 }
 
-export async function run(cb: Function) {
+export async function run(cb: (page: Page) => any) {
 	try {
 		if (timeout) {
 			clearTimeout(timeout);
@@ -21,7 +22,7 @@ export async function run(cb: Function) {
 				subWin = undefined;
 		}, 10000);
 		return result;
-	} catch (err: any) {
+	} catch (err) {
 		return err;
 	}
 }

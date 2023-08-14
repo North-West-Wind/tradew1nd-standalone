@@ -322,7 +322,7 @@ const setupEvents = () => {
     saveRuntimeToQueue(queue);
   });
 
-  ipcMain.on("request-reload-queues", (_event) => readQueues());
+  ipcMain.on("request-reload-queues", () => readQueues());
 
   ipcMain.on("set-options", (event, options: { autoplay?: boolean, random?: boolean, loop?: boolean, repeat?: boolean }) => {
     if (options.autoplay !== undefined) {

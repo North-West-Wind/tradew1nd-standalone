@@ -6,7 +6,7 @@ import Stream from "stream";
 import * as fs from "fs";
 import * as path from "path";
 import EventEmitter from "events";
-import { clamp, sleep } from "../helpers/misc";
+import { clamp } from "../helpers/misc";
 import moment from "moment";
 import "moment-duration-format";
 import { RuntimeSoundTrack } from "./music";
@@ -26,8 +26,8 @@ export declare interface TradeW1ndPlayer {
 	once(event: "playback", listener: (time: number) => void): this;
 	on(event: "error", listener: (error: Error) => void): this;
 	once(event: "error", listener: (error: Error) => void): this;
-	on(event: string, listener: Function): this;
-	once(event: string, listener: Function): this;
+	on(event: string, listener: () => void): this;
+	once(event: string, listener: () => void): this;
 }
 
 export class TradeW1ndPlayer extends EventEmitter {
