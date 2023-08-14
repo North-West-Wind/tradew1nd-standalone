@@ -14,7 +14,11 @@ export async function getMP3(url: string): Promise<{ error: boolean, url: string
 			});
 			await page.goto(url, { waitUntil: "domcontentloaded" });
 			await page.waitForSelector("circle, button[title='Toggle Play']").then(el => el.click());
-			const mp3 = await page.waitForRequest(req => req.url()?.startsWith("https://s3.ultimate-guitar.com/") || req.url()?.startsWith("https://www.youtube.com/embed/"));
+			const mp3 = await page.waitForRequest(req => {
+				const url = req.url();
+				if (!url) return false;
+				return url.startsWith("https://s3.ultimate-guitar.com/") || url.startsWith("https://www.youtube.com/embed/")
+			});
 			result.url = mp3.url();
 			result.error = false;
 		} catch (err: any) {

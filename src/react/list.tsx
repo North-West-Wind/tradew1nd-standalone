@@ -6,11 +6,39 @@ import { sleep } from "../helpers/misc";
 import { List } from "react-movable";
 
 export default class ListComponent extends React.Component {
-	state: { queues: Map<string, RuntimeSoundTrack[]>, viewing: string | null, rearrange: boolean, waitingFiles: boolean, paths: string[] };
+	state: {
+		queues: Map<string, RuntimeSoundTrack[]>,
+		viewing: string | null,
+		disable: boolean,
+		rearrange: boolean,
+		remove: boolean,
+		toBeDeleted: (string | number)[],
+		disabled: number[],
+		waitingFiles: boolean,
+		duplicate: boolean,
+		paths: string[],
+		newQueue: string,
+		newUrl: string,
+		showDisabled: boolean
+	};
 
 	constructor(props: any) {
 		super(props);
-		this.state = { queues: new Map(), viewing: null, rearrange: false, waitingFiles: false, paths: undefined };
+		this.state = {
+			queues: new Map(),
+			viewing: null,
+			disable: false,
+			rearrange: false,
+			remove: false,
+			toBeDeleted: [],
+			disabled: [],
+			waitingFiles: false,
+			duplicate: false,
+			paths: undefined,
+			newQueue: "",
+			newUrl: "",
+			showDisabled: true
+		};
 
 		(window as WindowExtra).electronAPI.onUpdateQueues(queues => {
 			if (queues.has(this.state.viewing)) this.setState({ queues });
@@ -19,7 +47,7 @@ export default class ListComponent extends React.Component {
 		(window as WindowExtra).electronAPI.requestQueues();
 		(window as WindowExtra).electronAPI.onUpdateStates(() => this.forceUpdate());
 		(window as WindowExtra).electronAPI.returnChooseFile(paths => {
-			if (paths) this.setState({ paths });
+			if (paths) this.setState({ newUrl: JSON.stringify(paths) });
 			this.setState({ waitingFiles: false });
 		});
 	}
@@ -29,11 +57,11 @@ export default class ListComponent extends React.Component {
 	}
 
 	setViewing(name: string) {
-		this.setState({ viewing: name });
+		this.setState({ viewing: name, remove: false, toBeDeleted: [] });
 	}
 
 	resetViewing() {
-		this.setState({ viewing: null });
+		this.setState({ viewing: null, remove: false, toBeDeleted: [] });
 	}
 
 	requestQueueDownload(queue?: string) {
@@ -57,31 +85,134 @@ export default class ListComponent extends React.Component {
 	}
 
 	toggleRearrange() {
+		const newState = !this.state.rearrange;
 		this.setState({ rearrange: !this.state.rearrange });
+		if (newState) this.setState({ disable: false, remove: false, toBeDeleted: [], disabled: []  });
+	}
+
+	toggleRemove() {
+		const newState = !this.state.remove;
+		if (!newState) {
+			if (this.state.viewing) (window as WindowExtra).electronAPI.requestDeleteTracks(this.state.viewing, this.state.toBeDeleted as number[]);
+			else (window as WindowExtra).electronAPI.requestDeleteQueues(this.state.toBeDeleted as string[]);
+		} else this.setState({ disable: false, rearrange: false });
+		this.setState({ remove: newState, toBeDeleted: [] });
+	}
+
+	toggleToBeDeleted(idOrIndex: string | number) {
+		const tbd = this.state.toBeDeleted;
+		if (tbd.includes(idOrIndex)) tbd.splice(tbd.indexOf(idOrIndex), 1);
+		else tbd.push(idOrIndex);
+		this.setState({ toBeDeleted: tbd });
+	}
+
+	toggleDuplicate() {
+		this.setState({ duplicate: !this.state.duplicate });
+	}
+
+	requestDuplicate(queue: string) {
+		if (!this.state.duplicate) return;
+		(window as WindowExtra).electronAPI.requestDuplicate(queue, this.state.newQueue);
+		this.setState({ duplicate: false, newQueue: "" });
+	}
+
+	setNewQueue(name: string) {
+		this.setState({ newQueue: name });
+	}
+
+	queueNameKeyUp(event: React.KeyboardEvent<HTMLInputElement>) {
+		if (event.key === "Enter") {
+			(window as WindowExtra).electronAPI.requestNewQueue(this.state.newQueue);
+			this.setState({ newQueue: "" });
+		}
+	}
+
+	setNewUrl(url: string) {
+		this.setState({ newUrl: url });
+	}
+
+	urlKeyUp(event: React.KeyboardEvent<HTMLInputElement>) {
+		if (!this.state.viewing) return;
+		if (event.key === "Enter") {
+			(window as WindowExtra).electronAPI.requestAddTrack(this.state.viewing, this.state.newUrl);
+			this.setState({ newUrl: "" });
+		}
+	}
+
+	toggleDisable() {
+		if (!this.state.viewing) return;
+		const newState = !this.state.disable;
+		if (!newState) (window as WindowExtra).electronAPI.requestDisable(this.state.viewing, this.state.disabled);
+		else this.setState({ rearrange: false, remove: false, toBeDeleted: [] });
+		this.setState({ disable: newState, disabled: this.state.queues.get(this.state.viewing).map((t, ii) => Object.assign({ ii }, t)).filter(t => t.disabled).map(t => t.ii) });
+	}
+
+	toggleDisabled(index: number) {
+		const tbd = this.state.disabled;
+		if (tbd.includes(index)) tbd.splice(tbd.indexOf(index), 1);
+		else tbd.push(index);
+		this.setState({ disabled: tbd });
+	}
+
+	toggleShowDisabled() {
+		this.setState({ showDisabled: !this.state.showDisabled });
+	}
+
+	removeDisabled() {
+		if (this.state.viewing)
+			(window as WindowExtra).electronAPI.requestDeleteTracks(this.state.viewing, this.state.queues.get(this.state.viewing).map((t, ii) => ({ ii, disabled: t.disabled })).filter(t => t.disabled).map(t => t.ii));
 	}
 
 	render() {
 		if (!this.state.viewing) {
 			const entries: React.ReactNode[] = [];
 			for (const [name, tracks] of this.state.queues.entries()) {
-				entries.push(<div key={name} className={"entry " + (tracks.some(t => t.playing) ? "playing" : (tracks.every(t => t.downloaded) ? "downloaded" : ""))} onClick={() => this.setViewing(name)} style={tracks.some(t => t.downloading) ? { animationName: "downloading", animationIterationCount: "infinite", animationDuration: "2s" } : {}}>
-					<h2>{name}</h2>
-					<h3>Tracks: {tracks.length}</h3>
-				</div>)
+				entries.push(
+					<div
+						key={name}
+						className={"entry" + (tracks.some(t => t.playing) ? " playing" : (tracks.every(t => t.downloaded) ? " downloaded" : "")) + (this.state.toBeDeleted.includes(name) ? " to-be-deleted" : "")}
+						onClick={() => this.state.duplicate ? this.requestDuplicate(name) : (this.state.remove ? this.toggleToBeDeleted(name) : this.setViewing(name))}
+						style={tracks.some(t => t.downloading) && !tracks.some(t => t.playing) && !this.state.toBeDeleted.includes(name) ? { animationName: "downloading", animationIterationCount: "infinite", animationDuration: "2s" } : {}}
+					>
+						<h2>{name}</h2>
+						<h3>Tracks: {tracks.length}</h3>
+					</div>
+				);
 			}
 			return <div className='flex-child blurry'>
 				<h1>Queue List</h1>
+				<div className="flex">
+					<input type="text" className="add-track" style={{ flex: 3 }} placeholder="Name of new queue..." value={this.state.newQueue} onChange={e => this.setNewQueue(e.target.value)} onKeyUp={(event) => this.queueNameKeyUp(event)} />
+					<div className={"add-track flex-option " + (this.state.duplicate ? "disabled" : "")} style={{ flex: 2 }} onClick={() => this.toggleDuplicate()}>{this.state.duplicate ? "Choose a queue" : "Duplicate"}</div>
+				</div>
+				<div className="flex center">
+					<div className={"flex-option red " + (!this.state.remove ? "disabled" : "")} onClick={() => this.toggleRemove()}>Remove</div>
+				</div>
 				{entries}
 			</div>
 		} else {
 			const entries: React.ReactNode[] = [];
-			for (const track of this.state.queues.get(this.state.viewing)!) {
-				entries.push(<div key={track.id} className={"entry " + (track.playing ? "playing" : (track.downloaded ? "downloaded" : ""))} style={track.downloading ? { animationName: "downloading", animationIterationCount: "infinite", animationDuration: "2s" } : {}} onClick={() => this.requestPlay(track.id)}>
-					<h2>{track.title}</h2>
-					<h3>{trackType[track.type]}</h3>
-				</div>)
+			const tracks = this.state.queues.get(this.state.viewing);
+			for (let ii = 0; ii < tracks.length; ii++) {
+				const track = tracks[ii];
+				entries.push(
+					<div
+						key={track.id}
+						className={"entry " + (track.playing ? "playing" : (track.downloaded ? "downloaded" : "")) + (this.state.toBeDeleted.includes(ii) ? " to-be-deleted" : "") + ((this.state.disable ? this.state.disabled.includes(ii) : track.disabled) ? " disabled" : "") + ((!this.state.showDisabled && track.disabled ? " hidden" : ""))}
+						style={track.downloading && !this.state.toBeDeleted.includes(ii) && (track.disabled || this.state.disabled.includes(ii)) ? { animationName: "downloading", animationIterationCount: "infinite", animationDuration: "2s" } : {}}
+						onClick={() => {
+							if (this.state.disable) this.toggleDisabled(ii);
+							else if (this.state.remove) this.toggleToBeDeleted(ii);
+							else this.requestPlay(track.id)
+						}}
+					>
+						<h2>{track.title}</h2>
+						<h3>{trackType[track.type]}</h3>
+						<h3>#{ii + 1}</h3>
+					</div>
+				);
 			}
-			const downloading = getDownloading().includes(this.state.viewing);
+			const downloading = this.state.queues.get(this.state.viewing).some(t => t.downloading);
 			return <div className='flex-child blurry'>
 				<h1 className="clickable" onClick={() => this.resetViewing()}>{"<"} {this.state.viewing}</h1>
 				<div className="flex">
@@ -89,20 +220,31 @@ export default class ListComponent extends React.Component {
 					<div className="flex-button" style={{ flex: 2, backgroundColor: downloading ? "#444444" : "#59cc32" }} onClick={() => this.requestDownloadAndPlay()}>Download and Play</div>
 				</div>
 				<div className="flex">
-					<input type="text" className="add-track" style={{ flex: 3 }} placeholder="Soundtrack URL..." value={this.state.paths ? JSON.stringify(this.state.paths) : undefined} />
-					<div className={"add-track flex-option " + (this.state.waitingFiles ? "disabled" : "")} style={{ flex: 1 }} onClick={() => this.requestChooseFile()}>Add File</div>
+					<input type="text" className="add-track" style={{ flex: 3 }} placeholder="Soundtrack URL..." value={this.state.newUrl} onChange={e => this.setNewUrl(e.target.value)} onKeyUp={event => this.urlKeyUp(event)} />
+					<div className={"add-track flex-option " + (this.state.waitingFiles ? "disabled" : "")} style={{ flex: 1 }} onClick={() => this.requestChooseFile()}>Local File</div>
 				</div>
 				<div className="flex center">
+					<div className={"flex-option " + (!this.state.showDisabled ? "disabled" : "")} onClick={() => this.toggleShowDisabled()}>Show Disabled</div>
+					<div className={"flex-option red"} onClick={() => this.removeDisabled()}>Remove Disabled</div>
+				</div>
+				<div className="flex center">
+					<div className={"flex-option unimportant " + (!this.state.disable ? "disabled" : "")} onClick={() => this.toggleDisable()}>Disable</div>
 					<div className={"flex-option " + (!this.state.rearrange ? "disabled" : "")} onClick={() => this.toggleRearrange()}>Rearrange</div>
+					<div className={"flex-option red " + (!this.state.remove ? "disabled" : "")} onClick={() => this.toggleRemove()}>Remove</div>
 				</div>
 				{this.state.rearrange && <List
 					values={this.state.queues.get(this.state.viewing)}
 					onChange={({ oldIndex, newIndex }) => this.changePos(oldIndex, newIndex)}
 					renderList={({ children, props }) => <ul className="hidden" {...props}>{children}</ul>}
-					renderItem={({ value: track, props }) => <li className="hidden" {...props}>
-						<div key={track.id} className={"entry " + (track.playing ? "playing" : (track.downloaded ? "downloaded" : ""))} style={track.downloading ? { animationName: "downloading", animationIterationCount: "infinite", animationDuration: "2s" } : {}} onClick={() => this.requestPlay(track.id)}>
+					renderItem={({ value: track, props, index }) => <li className="hidden" {...props}>
+						<div
+							key={track.id}
+							className={"entry" + (track.playing ? " playing" : (track.downloaded ? " downloaded" : "")) + (this.state.toBeDeleted.includes(index) ? " to-be-deleted" : "") + (track.disabled || this.state.disabled.includes(index) ? " disabled" : "") + ((!this.state.showDisabled && track.disabled ? " hidden" : ""))}
+							style={track.downloading && !this.state.toBeDeleted.includes(index) && (track.disabled || this.state.disabled.includes(index)) ? { animationName: "downloading", animationIterationCount: "infinite", animationDuration: "2s" } : {}}
+						>
 							<h2>{track.title}</h2>
 							<h3>{trackType[track.type]}</h3>
+						<h3>#{index + 1}</h3>
 						</div>
 					</li>}
 				/>}

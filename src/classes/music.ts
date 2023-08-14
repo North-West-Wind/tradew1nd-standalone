@@ -8,6 +8,7 @@ export type SoundTrack = {
 	thumbnail: string;
 	start?: number;
 	end?: number;
+	disabled?: boolean;
 }
 
 export const trackType = [
@@ -21,6 +22,7 @@ export const trackType = [
 ];
 
 export type RuntimeSoundTrack = SoundTrack & {
+	id: string;
 	downloading: boolean;
 	downloaded: boolean;
 	playing: boolean;

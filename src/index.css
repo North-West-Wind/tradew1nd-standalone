@@ -114,6 +114,10 @@ html {
   cursor: pointer;
 }
 
+.entry.disabled {
+  background-color: #00557f;
+}
+
 .playing {
   background-color: #59cc32;
 }
@@ -122,7 +126,11 @@ html {
   background-color: #43b1fc;
 }
 
-.entry.playing:hover, .entry.downloaded:hover {
+.to-be-deleted {
+  background-color: #eb0400;
+}
+
+.entry.playing:hover, .entry.downloaded:hover, .entry.to-be-deleted:hover {
   border-color: white;
 }
 
@@ -171,6 +179,10 @@ html {
 
 .flex-option.red {
   background-color: #eb0400;
+}
+
+.flex-option.unimportant {
+  background-color: #00557f;
 }
 
 .flex-option.disabled {
@@ -242,4 +254,8 @@ a {
 
 a:hover {
   text-decoration: underline;
+}
+
+div.hidden {
+  display: none;
 }

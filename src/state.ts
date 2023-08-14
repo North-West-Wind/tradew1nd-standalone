@@ -22,6 +22,8 @@ export function addQueues(...q: { name: string, tracks: RuntimeSoundTrack[] }[])
 		queues.set(queue.name, queue.tracks);
 	return queues;
 }
+export function setQueue(n: string, q: RuntimeSoundTrack[]) { return queues.set(n, q); }
+export function delQueue(n: string) { return queues.delete(n); }
 export function clearQueues() { queues.clear(); }
 
 // Main-side only

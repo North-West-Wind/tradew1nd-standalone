@@ -34,6 +34,7 @@ export function saveRuntimeToQueue(queue: string) {
 		volume: t.volume,
 		thumbnail: t.thumbnail,
 		start: t.start,
-		end: t.end
+		end: t.end,
+		disabled: t.disabled
 	})), null, 2));
 }

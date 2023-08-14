@@ -6,14 +6,16 @@ import puppeteer from 'puppeteer-core';
 import pie from "puppeteer-in-electron";
 import trayIcon from "../public/images/tradew1nd-icon.png";
 import winIcon from "../public/images/tradew1nd-win.png";
-import { addQueues, clearQueues, getQueues, getDownloading, setBrowser, setDataPath, setDownloadPath, setQueuePath, setMainWindow, getMainWindow, setPlaying, getPlaying } from './state';
+import { addQueues, clearQueues, getQueues, getDownloading, setBrowser, setDataPath, setDownloadPath, setQueuePath, setMainWindow, getMainWindow, setPlaying, getPlaying, getQueuePath, delQueue, setQueue } from './state';
 import { watch } from 'chokidar';
 import { RuntimeSoundTrack, SoundTrack } from './classes/music';
-import { downloadTrack } from './helpers/downloader';
+import { addTrack, downloadTrack } from './helpers/downloader';
 import { TradeW1ndPlayer } from './classes/player';
 import { fixTrack, saveRuntimeToQueue } from "./helpers/queue";
 import { clamp, isBetween } from "./helpers/misc";
 import ElectronStore from "electron-store";
+import trash from "trash";
+import getDuplicateName from "get-duplicate-name";
 
 // Path setup
 const dataPath = setDataPath(app.getPath("userData"));
@@ -36,6 +38,11 @@ const player = new TradeW1ndPlayer();
   player.setVolume((<number> volume) * 100);
 
   player.on("volume", volume => storage.set("volume", volume));
+
+  player.autoplay = !!storage.get("autoplay", true);
+  player.random = !!storage.get("random", false);
+  player.loop = !!storage.get("loop", false);
+  player.repeat = !!storage.get("repeat", false);
 }
 
 // Variables
@@ -81,11 +88,26 @@ const createWindow = () => {
   win.webContents.openDevTools();
 }
 
-const setupEvents = () => {
-  function readQueues() {
+function readQueues(file?: string) {
+  const downloaded = fs.readdirSync(downloadPath);
+  const playing = getPlaying();
+  if (file) {
+    file = path.basename(file);
+    if (!file.endsWith(".json")) return;
+    if (!fs.existsSync(path.resolve(queuePath, file))) return delQueue(file.slice(0, -5));
+    const tracks = <SoundTrack[]> JSON.parse(fs.readFileSync(path.resolve(queuePath, file), { encoding: "utf8" }));
+    const rtTracks: RuntimeSoundTrack[] = [];
+    var needFix = false;
+    for (const track of tracks) {
+      needFix = fixTrack(track) || needFix;
+      const rtTrack = <RuntimeSoundTrack> track;
+      if (downloaded.find(d => d === track.id)) rtTrack.downloaded = true;
+      if (playing?.queue === file.slice(0, -5) && playing.id === track.id) rtTrack.playing = true;
+      rtTracks.push(rtTrack);
+    }
+    setQueue(file.slice(0, -5), rtTracks);
+  } else {
     clearQueues();
-    const downloaded = fs.readdirSync(downloadPath);
-    const playing = getPlaying();
     for (const file of fs.readdirSync(queuePath)) {
       if (!file.endsWith(".json")) continue;
       const tracks = <SoundTrack[]> JSON.parse(fs.readFileSync(path.resolve(queuePath, file), { encoding: "utf8" }));
@@ -101,15 +123,17 @@ const setupEvents = () => {
       addQueues({ name: file.slice(0, -5), tracks: rtTracks });
       if (needFix) saveRuntimeToQueue(file.slice(0, -5));
     }
-    getMainWindow().webContents.send("update-queues", getQueues());
   }
+  getMainWindow().webContents.send("update-queues", getQueues());
+}
 
+const setupEvents = () => {
   const watcher = watch(queuePath, { persistent: true });
   watcher.on("add", readQueues).on("change", readQueues).on("unlink", readQueues);
-  readQueues();
+  //readQueues();
 
   const downloadWatcher = watch(downloadPath, { persistent: true });
-  downloadWatcher.on("unlink", readQueues);
+  downloadWatcher.on("unlink", () => readQueues());
 
   ipcMain.on("request-queues", (event) => {
     event.sender.send("update-queues", getQueues());
@@ -143,7 +167,7 @@ const setupEvents = () => {
         }
       }
     }
-    await downloadFromArray(tracks, true);
+    await downloadFromArray(tracks.filter(t => !t.disabled), true);
     if (failed.length) {
       console.log("Retrying soundtracks that failed to be downloaded:", failed.length);
       await downloadFromArray(failed, false);
@@ -193,12 +217,7 @@ const setupEvents = () => {
 
       const beforeVolume = track.volume;
 
-      player.once("play", playerId => {
-        if (track.id !== playerId) return;
-        track.playing = true;
-        event.sender.send("update-queues", getQueues());
-        event.sender.send("update-states", { playing: setPlaying({ queue, id }) });
-      }).once("finish", playerId => {
+      const onFinish = (playerId?: string) => {
         if (track.id !== playerId && playerId) return;
         track.playing = false;
         if (track.volume !== beforeVolume) saveRuntimeToQueue(queue);
@@ -209,7 +228,8 @@ const setupEvents = () => {
         if (player.repeat) return play(track.id);
         if (player.autoplay) {
           // Update tracks variable
-          const tracks = getQueues().get(queue);
+          const tracks = getQueues().get(queue)?.filter(t => !t.disabled);
+          if (!tracks) return;
           const thisTrack = tracks.find(t => t.id === track.id);
           const index = tracks.indexOf(thisTrack);
           var id: string;
@@ -224,7 +244,14 @@ const setupEvents = () => {
         }
 
         event.sender.send("update-states", { playing: setPlaying(null) });
-      });
+      }
+
+      player.once("play", playerId => {
+        if (track.id !== playerId) return;
+        track.playing = true;
+        event.sender.send("update-queues", getQueues());
+        event.sender.send("update-states", { playing: setPlaying({ queue, id }) });
+      }).once("finish", onFinish);
   
       player.playId(track, seek);
       seek = 0;
@@ -244,15 +271,76 @@ const setupEvents = () => {
     event.sender.send("return-choose-file", result.canceled ? undefined : result.filePaths);
   });
 
-  ipcMain.on("request-add-track", async (event, uri: string) => {
-
+  ipcMain.on("request-delete-queues", async (_event, queues: string[]) => {
+    for (const queue of queues) {
+      if (!getQueues().has(queue)) continue;
+      await trash(path.resolve(getQueuePath(), queue + ".json"));
+    }
   });
 
+  ipcMain.on("request-delete-tracks", (_event, queue: string, indices: number[]) => {
+    const tracks = getQueues().get(queue);
+    if (!tracks) return;
+    for (const index of indices.sort((a, b) => b - a)) {
+      if (index >= tracks.length) continue;
+      tracks.splice(index, 1);
+    }
+    saveRuntimeToQueue(queue);
+  });
+
+  ipcMain.on("request-duplicate", (_event, queue: string, newQueue: string) => {
+    if (!getQueues().has(queue)) return;
+    if (!newQueue) newQueue = getDuplicateName(Array.from(getQueues().keys()).map(name => ({ name })), queue, "copy");
+    fs.cpSync(path.resolve(getQueuePath(), queue + ".json"), path.resolve(getQueuePath(), newQueue + ".json"));
+  });
+
+  ipcMain.on("request-new-queue", (_event, newQueue: string) => {
+    if (!newQueue) return;
+    if (getQueues().has(newQueue)) newQueue = getDuplicateName(Array.from(getQueues().keys()).map(name => ({ name })), newQueue, "diff");
+    fs.writeFileSync(path.resolve(getQueuePath(), newQueue + ".json"), "[]");
+  });
+
+  ipcMain.on("request-add-track", async (event, queue: string, url: string) => {
+    event.sender.send("update-adding-track");
+    try {
+      const result = await addTrack(queue, url);
+      event.sender.send("update-added-track", result);
+      saveRuntimeToQueue(queue);
+    } catch (err) {
+      console.error(err);
+      event.sender.send("update-added-track", undefined);
+    }
+  });
+
+  ipcMain.on("request-disable", (_event, queue: string, indices: number[]) => {
+    const tracks = getQueues().get(queue);
+    if (!tracks) return;
+    for (let ii = 0; ii < tracks.length; ii++) {
+      if (indices.includes(ii)) tracks[ii].disabled = true;
+      else tracks[ii].disabled = undefined; 
+    }
+    saveRuntimeToQueue(queue);
+  });
+
+  ipcMain.on("request-reload-queues", (_event) => readQueues());
+
   ipcMain.on("set-options", (event, options: { autoplay?: boolean, random?: boolean, loop?: boolean, repeat?: boolean }) => {
-    if (options.autoplay !== undefined) player.autoplay = options.autoplay;
-    if (options.random !== undefined) player.random = options.random;
-    if (options.loop !== undefined) player.loop = options.loop;
-    if (options.repeat !== undefined) player.repeat = options.repeat;
+    if (options.autoplay !== undefined) {
+      player.autoplay = options.autoplay;
+      storage.set("autoplay", player.autoplay);
+    }
+    if (options.random !== undefined) {
+      player.random = options.random;
+      storage.set("random", player.random);
+    }
+    if (options.loop !== undefined) {
+      player.loop = options.loop;
+      storage.set("loop", player.loop);
+    }
+    if (options.repeat !== undefined) {
+      player.repeat = options.repeat;
+      storage.set("repeat", player.repeat);
+    }
     event.sender.send("update-options", options);
   });
 
@@ -270,7 +358,7 @@ const setupEvents = () => {
     if (!playing) return;
     const track = getQueues().get(playing.queue)?.find(t => t.id === playing.id);
     if (track) {
-      track.volume = clamp(volume / 100, 0, 2);
+      track.volume = clamp(volume / 100, 0, 4);
       player.setVolume(player.volume * 100, volume);
       event.sender.send("update-queues", getQueues());
     }

@@ -24,6 +24,8 @@ export declare interface TradeW1ndPlayer {
 	once(event: "volume", listener: (volume: number) => void): this;
 	on(event: "playback", listener: (time: number) => void): this;
 	once(event: "playback", listener: (time: number) => void): this;
+	on(event: "error", listener: (error: Error) => void): this;
+	once(event: "error", listener: (error: Error) => void): this;
 	on(event: string, listener: Function): this;
 	once(event: string, listener: Function): this;
 }
@@ -56,9 +58,14 @@ export class TradeW1ndPlayer extends EventEmitter {
 	loop = false;
 	repeat = false;
 
+	constructor() {
+		super();
+		this.on("error", () => this.emit("finish"));
+	}
+
 	async playId(track: RuntimeSoundTrack, seek = 0) {
 		const file = path.resolve(getDownloadPath(), track.id);
-		if (!fs.existsSync(file)) throw new Error("Cannot find " + file);
+		if (!fs.existsSync(file)) return this.emit("error", new Error("Cannot find " + file));
 
 		console.log("Playing from", file);
 
@@ -68,7 +75,7 @@ export class TradeW1ndPlayer extends EventEmitter {
 		if (seek > track.time * 1000) return;
 		if (!seek) seek = track.start || 0;
 		this.localVolume = track.volume;
-		this.stream = this.decodeStream(fs.createReadStream(file), seek, track.end || 0).on("error", err => console.error("Input error", err)).pipe(new VolumeTransformer({ type: "s16le", volume: 1 }));
+		this.stream = this.decodeStream(fs.createReadStream(file), seek, track.end || 0).on("error", err => console.error("Transcoder error", err)).pipe(new VolumeTransformer({ type: "s16le", volume: 1 }));
 		this.stream.setVolumeLogarithmic(this.volume * this.localVolume);
 		this.throttle = new Throttle({ bps: TradeW1ndPlayer.BITRATE });
     this.speaker = new Speaker({ sampleRate: this.metadata.format?.sampleRate || 44100, channels: this.metadata.format?.numberOfChannels || 2 });
@@ -109,7 +116,7 @@ export class TradeW1ndPlayer extends EventEmitter {
 		if (start > 0) args.push('-ss', moment.duration(start, "ms").format("HH:mm:ss.SSS"));
 		if (end > 0) args.push("-t", moment.duration(end - start, "ms").format("HH:mm:ss.SSS"));
 		const transcoder = new FFmpeg({ args });
-		return stream.pipe(transcoder);
+		return stream.on("error", err => console.error("Readable error", err)).pipe(transcoder);
 	}
 
 	async finish(id?: string) {
@@ -170,7 +177,7 @@ export class TradeW1ndPlayer extends EventEmitter {
 
 	setVolume(volume: number, localVolume = 100) {
 		this.volume = clamp(volume / 100, 0, 2);
-		this.localVolume = clamp(localVolume / 100, 0, 2);
+		this.localVolume = clamp(localVolume / 100, 0, 4);
 		this.stream?.setVolumeLogarithmic(this.volume * this.localVolume);
 		this.emit("volume", this.volume);
 	}

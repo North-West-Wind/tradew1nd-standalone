@@ -3,3 +3,7 @@ export class StatusError extends Error {
 		super("Received HTTP Status: " + status);
 	}
 }
+
+export class ActualError extends Error {
+	isActualError = true;
+}

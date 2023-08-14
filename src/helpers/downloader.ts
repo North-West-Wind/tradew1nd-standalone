@@ -6,7 +6,7 @@ import { RuntimeSoundTrack, SoundTrack } from "../classes/music";
 import { getDownloadPath, getPlaying, getQueues } from "../state";
 import ytdl from "ytdl-core";
 import fetch from "node-fetch";
-import { StatusError } from "../classes/error";
+import { ActualError, StatusError } from "../classes/error";
 import { SCDL } from "@vncsprd/soundcloud-downloader";
 import { Readable } from "stream";
 import { getMP3 } from "./musescore";
@@ -25,7 +25,7 @@ export async function downloadTrack(track: SoundTrack) {
 		// YouTube
 		case 0:
 		case 1:
-			await new Promise((res, rej) => ytdl(track.url, { filter: "audioonly" }).pipe(writeStream).on("close", res).on("error", rej));
+			await new Promise((res, rej) => ytdl(track.url, { filter: "audioonly" }).on("error", rej).pipe(writeStream).on("close", res).on("error", rej));
 			break;
 		// URL / Google Drive
 		case 2:
@@ -55,25 +55,30 @@ export async function downloadTrack(track: SoundTrack) {
 }
 
 export async function addTrack(queue: string, url: string) {
+	var urls: string[];
 	try {
 		// Check if it's JSON
 		const data = JSON.parse(url);
-		if (!Array.isArray(data)) throw new Error("Not an array");
-		var counter = 0;
-		for (const path of data) {
-			if (!!(await addSingleTrack(queue, path))) counter++;
-		}
-		return counter;
+		if (!Array.isArray(data)) throw new ActualError("Not an array");
+		if (!data.length) throw new ActualError("Empty array");
+		urls = data;
 	} catch (err) {
-		if (!/^https?:\/\//.test(url)) throw new Error("Invalid URL");
-		return await addSingleTrack(queue, url);
+		if (err instanceof ActualError) throw err;
+		urls = [url];
 	}
+	if (urls.length == 1) return await addSingleTrack(queue, urls[0]);
+	var counter = 0;
+	for (const path of urls)
+		if (!!(await addSingleTrack(queue, path)))
+			counter++;
+	return counter;
+
 }
 
 async function addSingleTrack(queue: string, url: string): Promise<SoundTrack | undefined> {
 	if (/^https?:\/\//.test(url)) return <SoundTrack>await addURLTrack(queue, url);
 	const result = await addFile(url);
-	if (!result) return;
+	if (!result) throw new Error("Something went wrong while adding track " + url);
 	fixTrack(result[0]);
 	fs.cpSync(url, path.resolve(getDownloadPath(), result[0].id));
 	const rtTrack = <RuntimeSoundTrack> result[0];
@@ -213,7 +218,6 @@ async function addURL(link: string) {
 		return undefined;
 	}
 	if (!metadata || !stream) return undefined;
-	const length = Math.round(metadata.format.duration);
 	const song: SoundTrack = {
 		title: title,
 		url: link,
@@ -238,7 +242,7 @@ async function addFile(url: string) {
 	const song: SoundTrack = {
 		title: title,
 		url: url,
-		type: 2,
+		type: 6,
 		time: metadata.format.duration,
 		volume: 1,
 		thumbnail: "https://www.dropbox.com/s/ms27gzjcz4c3h3z/audio-x-generic.svg?dl=1"

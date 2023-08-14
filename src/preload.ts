@@ -2,7 +2,7 @@
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
 
 import { contextBridge, ipcRenderer } from "electron";
-import { SoundTrack } from "./classes/music";
+import { RuntimeSoundTrack, SoundTrack } from "./classes/music";
 
 contextBridge.exposeInMainWorld("electronAPI", {
 	onUpdateQueues: (callback: ((queues: Map<string, SoundTrack[]>) => {})) => ipcRenderer.on("update-queues", (_e, q) => callback(q)),
@@ -11,12 +11,21 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	onUpdatePaused: (callback: ((paused: boolean) => {})) => ipcRenderer.on("update-paused", (_e, p) => callback(p)),
 	onUpdateVolume: (callback: ((volume: number) => {})) => ipcRenderer.on("update-volume", (_e, v) => callback(v)),
 	onUpdateTime: (callback: ((time: number) => {})) => ipcRenderer.on("update-time", (_e, t) => callback(t)),
+	onUpdateAddingTrack: (callback: (() => {})) => ipcRenderer.on("update-adding-track", (_e) => callback()),
+	onUpdateAddedTrack: (callback: ((result?: RuntimeSoundTrack | number) => {})) => ipcRenderer.on("update-added-track", (_e, r) => callback(r)),
 	requestQueues: () => ipcRenderer.send("request-queues"),
 	requestQueueDownload: (queue: string) => ipcRenderer.send("request-queue-download", queue),
 	requestStates: () => ipcRenderer.send("request-states"),
 	requestPlay: (queue: string, id: string, seek?: number) => ipcRenderer.send("request-play", queue, id, seek),
 	requestStop: () => ipcRenderer.send("request-stop"),
 	requestChooseFile: () => ipcRenderer.send("request-choose-file"),
+	requestDeleteQueues: (queues: string[]) => ipcRenderer.send("request-delete-queues", queues),
+	requestDeleteTracks: (queue: string, indices: number[]) => ipcRenderer.send("request-delete-tracks", queue, indices),
+	requestDuplicate: (queue: string, newQueue: string) => ipcRenderer.send("request-duplicate", queue, newQueue),
+	requestNewQueue: (name: string) => ipcRenderer.send("request-new-queue", name),
+	requestAddTrack: (queue: string, url: string) => ipcRenderer.send("request-add-track", queue, url),
+	requestDisable: (queue: string, indices: number[]) => ipcRenderer.send("request-disable", queue, indices),
+	requestReloadQueues: () => ipcRenderer.send("request-reload-queues"),
 	returnChooseFile: (callback: ((paths: undefined | string[]) => {})) => ipcRenderer.on("return-choose-file", (_e, p) => callback(p)),
 	setOptions: (options: { autoplay?: boolean, random?: boolean, loop?: boolean, repeat?: boolean }) => ipcRenderer.send("set-options", options),
 	setPaused: (paused: boolean) => ipcRenderer.send("set-paused", paused),
