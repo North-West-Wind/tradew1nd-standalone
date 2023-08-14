@@ -2,7 +2,7 @@
   "name": "tradew1nd-standalone",
   "productName": "tradew1nd-standalone",
   "version": "1.0.0",
-  "description": "My Electron application description",
+  "description": "TradeW1nd desktop music player",
   "main": ".webpack/main",
   "scripts": {
     "start": "electron-forge start",

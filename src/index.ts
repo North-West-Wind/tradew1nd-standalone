@@ -70,7 +70,8 @@ const createWindow = () => {
       nodeIntegration: true,
     },
     icon: nativeImage.createFromDataURL(winIcon),
-    show: false
+    show: false,
+    autoHideMenuBar: true
   }));
 
   win.maximize();
@@ -85,7 +86,7 @@ const createWindow = () => {
   win.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
 
   // Open the DevTools.
-  win.webContents.openDevTools();
+  // win.webContents.openDevTools();
 }
 
 function readQueues(file?: string) {
