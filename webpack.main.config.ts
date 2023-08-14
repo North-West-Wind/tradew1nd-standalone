@@ -1,6 +1,12 @@
 import type { Configuration } from 'webpack';
+import { IgnorePlugin } from 'webpack';
 
 import { rules } from './webpack.rules';
+
+const optionalPlugins: any[] = [];
+if (process.platform !== "darwin") { // don't ignore on OSX
+  optionalPlugins.push(new IgnorePlugin({ resourceRegExp: /readable-stream\/transform/ }));
+}
 
 export const mainConfig: Configuration = {
   /**
@@ -15,4 +21,5 @@ export const mainConfig: Configuration = {
   resolve: {
     extensions: ['.js', '.ts', '.jsx', '.tsx', '.css', '.json'],
   },
+  plugins: [...optionalPlugins]
 };

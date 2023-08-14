@@ -48,7 +48,6 @@
   },
   "dependencies": {
     "@vncsprd/soundcloud-downloader": "^1.2.2",
-    "cheerio": "^1.0.0-rc.12",
     "chokidar": "^3.5.3",
     "electron-json-storage": "^4.6.0",
     "electron-serve": "^1.1.0",
