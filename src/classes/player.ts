@@ -128,9 +128,6 @@ export class TradeW1ndPlayer extends EventEmitter {
 			});
 		this.throttle?.end();
 		this.stream?.end();
-		this.stream?.removeAllListeners();
-		this.throttle?.removeAllListeners();
-		this.speaker?.removeAllListeners();
 		this.stream = undefined;
 		this.throttle = undefined;
 		this.speaker = undefined;
@@ -145,7 +142,7 @@ export class TradeW1ndPlayer extends EventEmitter {
 		}
 	}
 
-	async pause() {
+	pause() {
 		if (!this.playing || this.paused || this.togglingPause) return;
 		//this.togglingPause = true;
 		this.emit("pause");
@@ -160,7 +157,7 @@ export class TradeW1ndPlayer extends EventEmitter {
 		//this.emit("paused");
 	}
 
-	async resume() {
+	resume() {
 		if (!this.playing || !this.paused || this.togglingPause) return;
 		//this.togglingPause = true;
 		this.emit("resume");
