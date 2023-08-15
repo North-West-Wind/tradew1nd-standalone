@@ -63,7 +63,7 @@ export default class TrackInfoComponent extends React.Component {
 	}
 
 	actualSetStartEnd(start: number, end: number) {
-		(window as WindowExtra).electronAPI.setStartEnd(start, end, { queue: this.state.anotherTrack.queue, id: this.state.anotherTrack.track.id });
+		(window as WindowExtra).electronAPI.setStartEnd(start, end, this.state.anotherTrack ? { queue: this.state.anotherTrack.queue, id: this.state.anotherTrack.track.id } : undefined);
 	}
 
 	render() {
