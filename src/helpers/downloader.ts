@@ -1,20 +1,21 @@
 import * as fs from "fs";
 import * as path from "path";
-import Stream from "stream";
 import { RuntimeSoundTrack, SoundTrack } from "../classes/music";
 import { getDownloadPath, getQueues } from "../state";
-import ytdl from "ytdl-core";
+import ytdl, { videoInfo } from "ytdl-core";
 import fetch from "node-fetch";
 import { ActualError, StatusError } from "../classes/error";
 import { SCDL } from "@vncsprd/soundcloud-downloader";
 import { Readable } from "stream";
 import { getMP3 } from "./musescore";
 import { fixTrack } from "./queue";
-import ytpl from "ytpl";
+import ytpl, { Result } from "ytpl";
 import { decodeHtmlEntity, humanDurationToNum } from "./misc";
 import { validMSSetURL, validMSURL, validSCURL, validURL, validYTPlaylistURL, validYTURL } from "./validator";
-import { parseFile, parseStream } from "music-metadata";
+import { IAudioMetadata, parseFile, parseStream } from "music-metadata";
 import { museSet, muse } from "musescore-metadata";
+import { MuseSet } from "musescore-metadata/lib/interfaces/set";
+import { MuseScore } from "musescore-metadata/lib/interfaces/common";
 const scdl = new SCDL();
 
 export async function downloadTrack(track: SoundTrack) {
@@ -28,18 +29,20 @@ export async function downloadTrack(track: SoundTrack) {
 			break;
 		// URL / Google Drive
 		case 2:
-		case 4:
+		case 4: {
 			const response = await fetch(track.url);
 			if (!response.ok) throw new StatusError(response.status);
 			await new Promise((res, rej) => response.body.pipe(writeStream).on("close", res).on("error", rej));
 			break;
+		}
 		// SoundCloud
-		case 3:
+		case 3: {
 			const stream = <Readable>await scdl.download(track.url);
 			await new Promise((res, rej) => stream.pipe(writeStream).on("close", res).on("error", rej));
 			break;
+		}
 		// Musescore
-		case 5:
+		case 5: {
 			const c = await getMP3(track.url);
 			if (c.error) throw new Error(c.message);
 			if (c.url.startsWith("https://www.youtube.com/embed/")) {
@@ -51,11 +54,12 @@ export async function downloadTrack(track: SoundTrack) {
 				await new Promise((res, rej) => response.body.pipe(writeStream).on("close", res).on("error", rej));
 			}
 			break;
+		}
 	}
 }
 
 export async function addTrack(queue: string, url: string) {
-	var urls: string[];
+	let urls: string[];
 	try {
 		// Check if it's JSON
 		const data = JSON.parse(url);
@@ -67,7 +71,7 @@ export async function addTrack(queue: string, url: string) {
 		urls = [url];
 	}
 	if (urls.length == 1) return await addSingleTrack(queue, urls[0]);
-	var counter = 0;
+	let counter = 0;
 	for (const path of urls)
 		if (await addSingleTrack(queue, path))
 			counter++;
@@ -88,7 +92,7 @@ async function addSingleTrack(queue: string, url: string): Promise<SoundTrack | 
 }
 
 async function addURLTrack(queue: string, url: string): Promise<SoundTrack | number> {
-	var result: SoundTrack[] | undefined;
+	let result: SoundTrack[] | undefined;
 	if (validYTPlaylistURL(url)) result = await addYTPlaylist(url);
 	else if (validYTURL(url)) result = await addYTURL(url);
 	else if (validSCURL(url)) result = await addSCURL(url);
@@ -108,8 +112,9 @@ async function addURLTrack(queue: string, url: string): Promise<SoundTrack | num
 }
 
 async function addYTPlaylist(link: string) {
+	let playlistInfo: Result;
 	try {
-		var playlistInfo = await ytpl(link, { limit: Infinity });
+		playlistInfo = await ytpl(link, { limit: Infinity });
 	} catch (err) {
 		console.error(err);
 		return undefined;
@@ -127,8 +132,9 @@ async function addYTPlaylist(link: string) {
 	return songs;
 }
 async function addYTURL(link: string, type = 0) {
+	let songInfo: videoInfo;
 	try {
-		var songInfo = await ytdl.getInfo(link);
+		songInfo = await ytdl.getInfo(link);
 	} catch (err) {
 		console.error(err);
 		return undefined;
@@ -185,16 +191,18 @@ async function addSCURL(link: string) {
 	return songs;
 }
 async function addMSSetURL(link: string) {
+	let data: MuseSet;
 	try {
-		var data = await museSet(link, { all: true });
+		data = await museSet(link, { all: true });
 	} catch (err) {
 		return undefined;
 	}
 	return <SoundTrack[]> data.scores.map(score => ({ title: score.title, url: score.url, type: 5, time: humanDurationToNum(score.duration), volume: 1, thumbnail: "http://s.musescore.org/about/images/musescore-mu-logo-bluebg-xl.png" }));
 }
 async function addMSURL(link: string) {
+	let data: MuseScore;
 	try {
-		var data = await muse(link);
+		data = await muse(link);
 	} catch (err) {
 		return undefined;
 	}
@@ -210,9 +218,11 @@ async function addMSURL(link: string) {
 }
 async function addURL(link: string) {
 	let title = link.split("/").slice(-1)[0].split(".").slice(0, -1).join(".").replace(/_/g, " ");
+	let stream: Readable;
+	let metadata: IAudioMetadata;
 	try {
-		var stream = <Stream.Readable>await fetch(link).then(res => res.body);
-		var metadata = await parseStream(stream, {}, { duration: true });
+		stream = <Readable>await fetch(link).then(res => res.body);
+		metadata = await parseStream(stream, {}, { duration: true });
 		if (metadata.format.trackInfo && metadata.format.trackInfo[0]?.name) title = metadata.format.trackInfo[0].name;
 	} catch (err) {
 		return undefined;
@@ -231,9 +241,11 @@ async function addURL(link: string) {
 async function addFile(url: string) {
 	if (!fs.existsSync(url)) return undefined;
 	let title = path.basename(url);
+	let stream: Readable;
+	let metadata: IAudioMetadata;
 	try {
-		var stream = fs.createReadStream(url);
-		var metadata = await parseFile(url, { duration: true });
+		stream = fs.createReadStream(url);
+		metadata = await parseFile(url, { duration: true });
 		if (metadata.format.trackInfo && metadata.format.trackInfo[0]?.name) title = metadata.format.trackInfo[0].name;
 	} catch (err) {
 		return undefined;

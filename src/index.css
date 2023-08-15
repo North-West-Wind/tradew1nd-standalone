@@ -33,6 +33,10 @@ html {
   text-align: center;
 }
 
+.v-center {
+  align-items: center;
+}
+
 .container {
   width: 100%;
   height: 100%;
@@ -101,12 +105,24 @@ html {
   cursor: pointer;
 }
 
-.entry > h2, .entry > h3 {
+h2, h3 {
   margin: 0;
 }
 
-.entry > h3 {
+h2 {
+  width: 100%;
+}
+
+h3 {
   color: #ccc;
+}
+
+.entry img {
+  max-width: 5rem;
+  width: auto;
+  height: auto;
+  border-radius: .5rem;
+  margin-left: .5rem;
 }
 
 .clickable:hover {
@@ -116,6 +132,10 @@ html {
 
 .entry.disabled {
   background-color: #00557f;
+}
+
+.entry.viewing {
+  background-color: #b13be4;
 }
 
 .playing {

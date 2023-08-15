@@ -27,7 +27,7 @@ export type ElectronBridge = {
 	setPaused: (paused: boolean) => void,
 	setVolume: (volume: number) => void,
 	setLocalVolume: (volume: number) => void,
-	setStartEnd: (start: number, end: number) => void,
+	setStartEnd: (start: number, end: number, anotherTrack?: { queue: string, id: string }) => void,
 	setTrackPos: (queue: string, currentPos: number, newPos: number) => void,
 }
 

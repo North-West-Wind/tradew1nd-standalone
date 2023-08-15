@@ -10,7 +10,7 @@ import "moment-duration-format";
 export default class TrackProgressComponent extends React.Component {
 	state: { track: RuntimeSoundTrack, time: number, changing: boolean };
 
-	constructor(props: {}) {
+	constructor(props: object) {
 		super(props);
 
 		this.state = { track: null, time: 0, changing: false };

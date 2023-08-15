@@ -5,7 +5,7 @@ import { SoundTrack } from "../classes/music";
 import { getQueuePath, getQueues } from "../state";
 
 export function fixTrack(track: SoundTrack) {
-	var changed = false;
+	let changed = false;
 	if (!track.id) {
 		track.id = crypto.createHash("md5").update(`${track.title};${track.url}`).digest("hex");
 		changed = true;

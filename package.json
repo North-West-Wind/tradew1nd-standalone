@@ -12,11 +12,8 @@
     "lint": "eslint --ext .ts,.tsx ."
   },
   "keywords": [],
-  "author": {
-    "name": "North-West-Wind",
-    "email": "wsyn148@gmail.com"
-  },
-  "license": "MIT",
+  "author": "NorthWestWind <wsyn148@gmail.com>",
+  "license": "GPL-3.0-or-later",
   "devDependencies": {
     "@electron-forge/cli": "^6.3.0",
     "@electron-forge/maker-deb": "^6.3.0",
@@ -25,6 +22,7 @@
     "@electron-forge/maker-zip": "^6.3.0",
     "@electron-forge/plugin-auto-unpack-natives": "^6.3.0",
     "@electron-forge/plugin-webpack": "^6.3.0",
+    "@electron-forge/publisher-github": "^6.3.0",
     "@types/electron-json-storage": "^4.5.0",
     "@types/moment-duration-format": "^2.2.3",
     "@types/react": "^18.2.19",
@@ -78,5 +76,13 @@
     "files": [
       "public/"
     ]
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/North-West-Wind/tradew1nd-standalone.git"
+  },
+  "bugs": {
+    "url": "https://github.com/North-West-Wind/tradew1nd-standalone/issues"
+  },
+  "homepage": "https://github.com/North-West-Wind/tradew1nd-standalone#readme"
 }

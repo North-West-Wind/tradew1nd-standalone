@@ -17,16 +17,16 @@ type PlaybackEvents = "pause" | "paused" | "resume" | "resumed";
 
 export declare interface TradeW1ndPlayer {
 	on(event: PlayerEvents, listener: (id: string) => void): this;
-	once(event: PlayerEvents, listener: (id: string) => void): this;
 	on(event: PlaybackEvents, listener: () => void): this;
-	once(event: PlaybackEvents, listener: () => void): this;
 	on(event: "volume", listener: (volume: number) => void): this;
-	once(event: "volume", listener: (volume: number) => void): this;
 	on(event: "playback", listener: (time: number) => void): this;
-	once(event: "playback", listener: (time: number) => void): this;
 	on(event: "error", listener: (error: Error) => void): this;
-	once(event: "error", listener: (error: Error) => void): this;
 	on(event: string, listener: () => void): this;
+	once(event: PlayerEvents, listener: (id: string) => void): this;
+	once(event: PlaybackEvents, listener: () => void): this;
+	once(event: "volume", listener: (volume: number) => void): this;
+	once(event: "playback", listener: (time: number) => void): this;
+	once(event: "error", listener: (error: Error) => void): this;
 	once(event: string, listener: () => void): this;
 }
 

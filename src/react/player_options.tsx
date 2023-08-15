@@ -4,7 +4,7 @@ import { WindowExtra } from "../classes/window";
 export default class PlayerOptionsComponent extends React.Component {
 	state: { enabled: boolean, autoplay: boolean, random: boolean, loop: boolean, repeat: boolean };
 
-	constructor(props: {}) {
+	constructor(props: object) {
 		super(props);
 		this.state = { enabled: false, autoplay: false, random: false, loop: false, repeat: false };
 		(window as WindowExtra).electronAPI.onUpdateStates((states) => {
@@ -22,7 +22,7 @@ export default class PlayerOptionsComponent extends React.Component {
 	}
 
 	toggleAutoplay() {
-		const options: any = { autoplay: !this.state.autoplay };
+		const options: { autoplay: boolean, loop?: boolean } = { autoplay: !this.state.autoplay };
 		if (!options.autoplay && this.state.loop) options.loop = !this.state.loop;
 		(window as WindowExtra).electronAPI.setOptions(options);
 	}
@@ -32,13 +32,13 @@ export default class PlayerOptionsComponent extends React.Component {
 	}
 
 	toggleLoop() {
-		const options: any = { loop: !this.state.loop };
+		const options: { loop: boolean, autoplay?: boolean } = { loop: !this.state.loop };
 		if (options.loop && !this.state.autoplay) options.autoplay = !this.state.autoplay;
 		(window as WindowExtra).electronAPI.setOptions(options);
 	}
 
 	toggleRepeat() {
-		const options: any = { repeat: !this.state.repeat };
+		const options: { repeat: boolean, loop?: boolean } = { repeat: !this.state.repeat };
 		if (options.repeat && this.state.loop) options.loop = !this.state.loop;
 		(window as WindowExtra).electronAPI.setOptions(options);
 	}

@@ -11,7 +11,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	onUpdatePaused: (callback: ((paused: boolean) => void)) => ipcRenderer.on("update-paused", (_e, p) => callback(p)),
 	onUpdateVolume: (callback: ((volume: number) => void)) => ipcRenderer.on("update-volume", (_e, v) => callback(v)),
 	onUpdateTime: (callback: ((time: number) => void)) => ipcRenderer.on("update-time", (_e, t) => callback(t)),
-	onUpdateAddingTrack: (callback: (() => void)) => ipcRenderer.on("update-adding-track", (_e) => callback()),
+	onUpdateAddingTrack: (callback: (() => void)) => ipcRenderer.on("update-adding-track", () => callback()),
 	onUpdateAddedTrack: (callback: ((result?: RuntimeSoundTrack | number) => void)) => ipcRenderer.on("update-added-track", (_e, r) => callback(r)),
 	requestQueues: () => ipcRenderer.send("request-queues"),
 	requestQueueDownload: (queue: string) => ipcRenderer.send("request-queue-download", queue),
@@ -31,6 +31,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	setPaused: (paused: boolean) => ipcRenderer.send("set-paused", paused),
 	setVolume: (volume: number) => ipcRenderer.send("set-volume", volume),
 	setLocalVolume: (volume: number) => ipcRenderer.send("set-local-volume", volume),
-	setStartEnd: (start: number, end: number) => ipcRenderer.send("set-start-end", start, end),
+	setStartEnd: (start: number, end: number, anotherTrack?: { queue: string, id: string }) => ipcRenderer.send("set-start-end", start, end, anotherTrack),
 	setTrackPos: (queue: string, currentPos: number, newPos: number) => ipcRenderer.send("set-track-pos", queue, currentPos, newPos),
 });
