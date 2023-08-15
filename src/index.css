@@ -87,6 +87,12 @@ html {
   border-radius: 50%;
   position: relative;
   width: 50%;
+  transition: all .25s ease;
+}
+
+#tradew1nd-placeholder:hover {
+  filter: brightness(80%);
+  cursor: pointer;
 }
 
 .entry {
@@ -278,4 +284,42 @@ a:hover {
 
 div.hidden {
   display: none;
+}
+
+.markdown {
+  margin: 5rem;
+  width: calc(100% - 10rem);
+}
+
+.markdown img {
+  width: 100%;
+}
+
+.overlay {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
+  text-align: left;
+  overflow-y: scroll;
+  z-index: 1000;
+}
+
+.overlay::-webkit-scrollbar {
+  display: none;
+}
+
+.close-button {
+  position: absolute;
+  top: 0;
+  right: 2.5%;
+  font-size: 4rem;
+  transition: all .25s ease;
+}
+
+.close-button:hover {
+  filter: brightness(80%);
+  cursor: pointer;
 }
