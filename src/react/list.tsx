@@ -48,7 +48,7 @@ export default class ListComponent extends React.Component {
 		(window as WindowExtra).electronAPI.requestQueues();
 		(window as WindowExtra).electronAPI.onUpdateStates(() => this.forceUpdate());
 		(window as WindowExtra).electronAPI.returnChooseFile(paths => {
-			if (paths) this.setState({ newUrl: JSON.stringify(paths) });
+			if (paths) (window as WindowExtra).electronAPI.requestAddTrack(this.state.viewing, JSON.stringify(paths));
 			this.setState({ waitingFiles: false });
 		});
 	}
@@ -220,7 +220,7 @@ export default class ListComponent extends React.Component {
 				<h1 className="clickable" onClick={() => this.resetViewing()}>{"<"} {this.state.viewing}</h1>
 				<div className="flex">
 					<input type="text" className="add-track" style={{ flex: 3 }} placeholder="Soundtrack URL..." value={this.state.newUrl} onChange={e => this.setNewUrl(e.target.value)} onKeyUp={event => this.urlKeyUp(event)} />
-					<div className={"add-track flex-option " + (this.state.waitingFiles ? "disabled" : "")} style={{ flex: 1 }} onClick={() => this.requestChooseFile()}>Local File</div>
+					<div className={"add-track flex-option " + (this.state.waitingFiles ? "disabled" : "")} style={{ flex: 1 }} onClick={() => this.requestChooseFile()}>Local File(s)</div>
 				</div>
 				<div className="flex">
 					<div className="flex-button" style={{ backgroundColor: downloading ? "#444444" : "#43b1fc" }} onClick={() => !downloading && this.requestQueueDownload()}>{!downloading ? "Download" : "Cancel"}</div>

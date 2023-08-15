@@ -84,7 +84,7 @@ export default class TrackInfoComponent extends React.Component {
 		else if (this.state.anotherTrack) return <div className="flex-child flex center blurry">
 			<div className="flex-child center">
 				<h1>Previewing Settings</h1>
-				<img src={this.state.anotherTrack.track.thumbnail} className={"thumbnail" + (this.state.paused ? " paused" : "")} onClick={() => this.togglePause()} onError={(e) => e.currentTarget.parentNode.removeChild(e.currentTarget)} /><br />
+				<img src={this.state.anotherTrack.track.thumbnail} className="thumbnail" onError={(e) => e.currentTarget.parentNode.removeChild(e.currentTarget)} /><br />
 				<h2>{this.state.anotherTrack.track.title}</h2>
 				<h3><a href={this.state.anotherTrack.track.url}>{this.state.anotherTrack.track.url}</a></h3>
 				<div>
@@ -99,7 +99,7 @@ export default class TrackInfoComponent extends React.Component {
 		</div>
 		else if (this.state.track) return <div className="flex-child flex center blurry">
 			<div className="flex-child center">
-				<img src={this.state.track.thumbnail} className={"thumbnail" + (this.state.paused ? " paused" : "")} onClick={() => this.togglePause()} onError={(e) => e.currentTarget.parentNode.removeChild(e.currentTarget)} /><br />
+				<img src={this.state.track.thumbnail} className={"thumbnail" + (this.state.paused ? " paused" : "")} onClick={() => this.togglePause()} /><br />
 				<h2>{this.state.track.title}</h2>
 				<h3><a href={this.state.track.url}>{this.state.track.url}</a></h3>
 				<div>
