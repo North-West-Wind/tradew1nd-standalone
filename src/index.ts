@@ -45,6 +45,13 @@ const player = new TradeW1ndPlayer();
   player.repeat = !!storage.get("repeat", false);
 }
 
+// Client settings
+const clientSettings = { showDisabled: true, showState: false };
+{
+  clientSettings.showDisabled = !!storage.get("showDisabled", true);
+  clientSettings.showState = !!storage.get("showState", false);
+}
+
 // Variables
 let currentRequestId: string;
 
@@ -332,7 +339,10 @@ const setupEvents = () => {
 
   ipcMain.on("request-reload-queues", () => readQueues());
 
+  ipcMain.on("request-client-settings", (event) => event.sender.send("update-client-settings", clientSettings));
+
   ipcMain.on("set-options", (event, options: { autoplay?: boolean, random?: boolean, loop?: boolean, repeat?: boolean }) => {
+    event.sender.send("update-options", options);
     if (options.autoplay !== undefined) {
       player.autoplay = options.autoplay;
       storage.set("autoplay", player.autoplay);
@@ -349,7 +359,6 @@ const setupEvents = () => {
       player.repeat = options.repeat;
       storage.set("repeat", player.repeat);
     }
-    event.sender.send("update-options", options);
   });
 
   ipcMain.on("set-paused", (_event, paused: boolean) => {
@@ -390,6 +399,14 @@ const setupEvents = () => {
     const track = tracks.splice(currentPos, 1);
     getQueues().set(queue, tracks.slice(0, newPos).concat(track, tracks.slice(newPos)));
     saveRuntimeToQueue(queue);
+  });
+
+  ipcMain.on("set-client-settings", (event, settings: { showDisabled?: boolean, showState?: boolean }) => {
+    if (settings.showDisabled !== undefined) clientSettings.showDisabled = settings.showDisabled;
+    if (settings.showState !== undefined) clientSettings.showState = settings.showState;
+    event.sender.send("update-client-settings", settings);
+    storage.set("showDisabled", clientSettings.showDisabled);
+    storage.set("showState", clientSettings.showState);
   });
 
   player.on("pause", () => getMainWindow().webContents.send("update-paused", true));

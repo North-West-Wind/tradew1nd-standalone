@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	onUpdateTime: (callback: ((time: number) => void)) => ipcRenderer.on("update-time", (_e, t) => callback(t)),
 	onUpdateAddingTrack: (callback: (() => void)) => ipcRenderer.on("update-adding-track", () => callback()),
 	onUpdateAddedTrack: (callback: ((result?: RuntimeSoundTrack | number) => void)) => ipcRenderer.on("update-added-track", (_e, r) => callback(r)),
+	onUpdateClientSettings: (callback: ((settings: { showDisabled?: boolean, showState?: boolean }) => void)) => ipcRenderer.on("update-client-settings", (_e, s) => callback(s)),
 	requestQueues: () => ipcRenderer.send("request-queues"),
 	requestQueueDownload: (queue: string) => ipcRenderer.send("request-queue-download", queue),
 	requestStates: () => ipcRenderer.send("request-states"),
@@ -26,6 +27,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	requestAddTrack: (queue: string, url: string) => ipcRenderer.send("request-add-track", queue, url),
 	requestDisable: (queue: string, indices: number[]) => ipcRenderer.send("request-disable", queue, indices),
 	requestReloadQueues: () => ipcRenderer.send("request-reload-queues"),
+	requestClientSettings: () => ipcRenderer.send("request-client-settings"),
 	returnChooseFile: (callback: ((paths: undefined | string[]) => void)) => ipcRenderer.on("return-choose-file", (_e, p) => callback(p)),
 	setOptions: (options: { autoplay?: boolean, random?: boolean, loop?: boolean, repeat?: boolean }) => ipcRenderer.send("set-options", options),
 	setPaused: (paused: boolean) => ipcRenderer.send("set-paused", paused),
@@ -33,4 +35,5 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	setLocalVolume: (volume: number) => ipcRenderer.send("set-local-volume", volume),
 	setStartEnd: (start: number, end: number, anotherTrack?: { queue: string, id: string }) => ipcRenderer.send("set-start-end", start, end, anotherTrack),
 	setTrackPos: (queue: string, currentPos: number, newPos: number) => ipcRenderer.send("set-track-pos", queue, currentPos, newPos),
+	setClientSettings: (settings: { showDisabled?: boolean, showState?: boolean }) => ipcRenderer.send("set-client-settings", settings),
 });

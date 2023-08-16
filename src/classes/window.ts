@@ -9,6 +9,7 @@ export type ElectronBridge = {
 	onUpdateTime: (callback: ((time: number) => void)) => void,
 	onUpdateAddingTrack: (callback: (() => void)) => void,
 	onUpdateAddedTrack: (callback: ((result?: RuntimeSoundTrack | number) => void)) => void,
+	onUpdateClientSettings: (callback: ((settings: { showDisabled?: boolean, showState?: boolean }) => void)) => void,
 	requestQueues: () => void,
 	requestQueueDownload: (queue: string) => void,
 	requestStates: () => void,
@@ -22,6 +23,7 @@ export type ElectronBridge = {
 	requestAddTrack: (queue: string, url: string) => void,
 	requestDisable: (queue: string, indices: number[]) => void,
 	requestReloadQueues: () => void,
+	requestClientSettings: () => void,
 	returnChooseFile: (callback: ((paths: undefined | string[]) => void)) => void,
 	setOptions: (options: { autoplay?: boolean, random?: boolean, loop?: boolean, repeat?: boolean }) => void,
 	setPaused: (paused: boolean) => void,
@@ -29,6 +31,7 @@ export type ElectronBridge = {
 	setLocalVolume: (volume: number) => void,
 	setStartEnd: (start: number, end: number, anotherTrack?: { queue: string, id: string }) => void,
 	setTrackPos: (queue: string, currentPos: number, newPos: number) => void,
+	setClientSettings: (settings: { showDisabled?: boolean, showState?: boolean }) => void,
 }
 
 export type WindowExtra = Window & typeof globalThis & { electronAPI: ElectronBridge }

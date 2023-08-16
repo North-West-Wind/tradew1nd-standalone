@@ -124,10 +124,9 @@ export class TradeW1ndPlayer extends EventEmitter {
 		if (this.speaker) 
 			await new Promise<void>(res => {
 				this.speaker.on("close", res);
-				this.speaker.close(true);
+				this.speaker.end();
 			});
 		this.throttle?.end();
-		this.stream?.end();
 		this.stream = undefined;
 		this.throttle = undefined;
 		this.speaker = undefined;

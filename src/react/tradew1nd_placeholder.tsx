@@ -2,6 +2,7 @@ import React from "react";
 import img from "../../public/images/tradew1nd.png";
 import { ReactMarkdown } from "react-markdown/lib/react-markdown";
 import remarkGfm from "remark-gfm";
+import InformationComponent from "./information";
 
 export default class TradeW1ndPlaceholderComponent extends React.Component {
 	state: { markdown: string, showHelp: boolean };
@@ -26,12 +27,7 @@ export default class TradeW1ndPlaceholderComponent extends React.Component {
 				<h3>Made by NorthWestWind</h3>
 				<h3><a href="https://github.com/North-West-Wind/tradew1nd-standalone">GitHub Repository</a></h3>
 			</div>
-			{this.state.showHelp && <div className="overlay flex">
-				<div className="close-button" onClick={() => this.toggleHelp()}>x</div>
-				<div className="markdown">
-					<ReactMarkdown children={this.state.markdown} remarkPlugins={[remarkGfm]} />
-				</div>
-			</div>}
+			{this.state.showHelp && <InformationComponent onClick={() => this.toggleHelp()} />}
 		</>
 	}
 }

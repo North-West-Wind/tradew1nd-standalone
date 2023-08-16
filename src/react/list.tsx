@@ -3,6 +3,10 @@ import { RuntimeSoundTrack, trackType } from "../classes/music";
 import { WindowExtra } from "../classes/window";
 import { List } from "react-movable";
 import { getViewingTrack, setViewingTrack } from "../state";
+import settingsSvg from "../../public/images/settings.svg";
+import SettingsComponent from "./settings";
+import informationSvg from "../../public/images/information.svg";
+import InformationComponent from "./information";
 
 export default class ListComponent extends React.Component {
 	state: {
@@ -18,7 +22,10 @@ export default class ListComponent extends React.Component {
 		paths: string[],
 		newQueue: string,
 		newUrl: string,
-		showDisabled: boolean
+		showDisabled: boolean,
+		showState: boolean,
+		showHelp: boolean,
+		showSettings: boolean
 	};
 
 	myRef = React.createRef<HTMLHeadingElement>();
@@ -38,7 +45,10 @@ export default class ListComponent extends React.Component {
 			paths: undefined,
 			newQueue: "",
 			newUrl: "",
-			showDisabled: true
+			showDisabled: true,
+			showState: false,
+			showHelp: false,
+			showSettings: false
 		};
 
 		(window as WindowExtra).electronAPI.onUpdateQueues(queues => {
@@ -51,6 +61,11 @@ export default class ListComponent extends React.Component {
 			if (paths) (window as WindowExtra).electronAPI.requestAddTrack(this.state.viewing, JSON.stringify(paths));
 			this.setState({ waitingFiles: false });
 		});
+		(window as WindowExtra).electronAPI.onUpdateClientSettings(settings => {
+			if (settings.showState !== undefined) this.setState({ showState: settings.showState });
+			if (settings.showDisabled !== undefined) this.setState({ showDisabled: settings.showDisabled });
+		});
+		(window as WindowExtra).electronAPI.requestClientSettings();
 	}
 
 	changePos(currentPos: number, newPos: number) {
@@ -149,7 +164,7 @@ export default class ListComponent extends React.Component {
 	}
 
 	toggleShowDisabled() {
-		this.setState({ showDisabled: !this.state.showDisabled });
+		(window as WindowExtra).electronAPI.setClientSettings({ showDisabled: !this.state.showDisabled });
 	}
 
 	removeDisabled() {
@@ -157,10 +172,60 @@ export default class ListComponent extends React.Component {
 			(window as WindowExtra).electronAPI.requestDeleteTracks(this.state.viewing, this.state.queues.get(this.state.viewing).map((t, ii) => ({ ii, disabled: t.disabled })).filter(t => t.disabled).map(t => t.ii));
 	}
 
+	toggleHelp() {
+		this.setState({ showHelp: !this.state.showHelp });
+	}
+
+	toggleSettings() {
+		this.setState({ showSettings: !this.state.showSettings });
+	}
+
+	getTrackEntry(track: RuntimeSoundTrack, ii: number) {
+		let addedText: string = undefined;
+		if (this.state.showState) {
+			if (this.state.toBeDeleted.includes(ii)) addedText = "Will be deleted";
+			else if ((this.state.disable ? this.state.disabled.includes(ii) : track.disabled)) addedText = "Disabled";
+			else if (track.playing) addedText = "Playing";
+			if (getViewingTrack()?.track.id === track.id) {
+				if (addedText) addedText += " / Viewing";
+				else addedText = "Viewing";
+			}
+		}
+		return <div
+			key={track.id}
+			className={"entry " + (track.playing ? "playing" : (track.downloaded ? "downloaded" : "")) + (this.state.toBeDeleted.includes(ii) ? " to-be-deleted" : "") + ((this.state.disable ? this.state.disabled.includes(ii) : track.disabled) ? " disabled" : "") + ((!this.state.showDisabled && track.disabled ? " hidden" : "")) + (getViewingTrack()?.track.id === track.id ? " viewing" : "")}
+			style={track.downloading && !this.state.toBeDeleted.includes(ii) && (track.disabled || this.state.disabled.includes(ii)) ? { animationName: "downloading", animationIterationCount: "infinite", animationDuration: "2s" } : {}}
+			onClick={() => {
+				if (this.state.disable) this.toggleDisabled(ii);
+				else if (this.state.remove) this.toggleToBeDeleted(ii);
+				else this.requestPlay(track.id)
+			}}
+			onContextMenu={() => {
+				const viewing = getViewingTrack();
+				if (!viewing || viewing.track.id !== track.id) setViewingTrack({ queue: this.state.viewing, track });
+				else setViewingTrack(undefined);
+				window.dispatchEvent(new Event("update-viewing-track"));
+				this.forceUpdate();
+			}}
+		>
+			<h2>{track.title}</h2>
+			<div className="flex v-center">
+				<h3>#{ii + 1} / {trackType[track.type]}</h3>
+				{[0, 3].includes(track.type) && <img src={track.thumbnail} />}
+			</div>
+			{addedText && <h3>{addedText}</h3>}
+		</div>
+	}
+
 	render() {
 		if (!this.state.viewing) {
 			const entries: React.ReactNode[] = [];
 			for (const [name, tracks] of this.state.queues.entries()) {
+				let addedText: string = undefined;
+				if (this.state.showState) {
+					if (this.state.toBeDeleted.includes(name)) addedText = "Will be deleted";
+					else if (tracks.some(t => t.playing)) addedText = "Playing";
+				}
 				entries.push(
 					<div
 						key={name}
@@ -170,11 +235,16 @@ export default class ListComponent extends React.Component {
 					>
 						<h2>{name}</h2>
 						<h3>Tracks: {tracks.length}</h3>
+						{addedText && <h3>{addedText}</h3>}
 					</div>
 				);
 			}
 			return <div className='flex-child blurry'>
-				<h1>Queue List</h1>
+				<div className="flex v-center">
+					<img src={informationSvg} className="clickable" onClick={() => this.toggleHelp()} />
+					<img src={settingsSvg} className="clickable" onClick={() => this.toggleSettings()} />
+					<h1>Queue List</h1>
+				</div>
 				<div className="flex">
 					<input type="text" className="add-track" style={{ flex: 3 }} placeholder="Name of new queue..." value={this.state.newQueue} onChange={e => this.setNewQueue(e.target.value)} onKeyUp={(event) => this.queueNameKeyUp(event)} />
 					<div className={"add-track flex-option " + (this.state.duplicate ? "disabled" : "")} style={{ flex: 2 }} onClick={() => this.toggleDuplicate()}>{this.state.duplicate ? "Choose a queue" : "Duplicate"}</div>
@@ -183,41 +253,20 @@ export default class ListComponent extends React.Component {
 					<div className={"flex-option red " + (!this.state.remove ? "disabled" : "")} onClick={() => this.toggleRemove()}>Remove</div>
 				</div>
 				{entries}
+				{this.state.showHelp && <InformationComponent onClick={() => this.toggleHelp()} />}
+				{this.state.showSettings && <div className="overlay flex">
+					<div className="close-button" onClick={() => this.toggleSettings()}>x</div>
+					<SettingsComponent />
+				</div>}
 			</div>
 		} else {
-			const entries: React.ReactNode[] = [];
-			const tracks = this.state.queues.get(this.state.viewing);
-			for (let ii = 0; ii < tracks.length; ii++) {
-				const track = tracks[ii];
-				entries.push(
-					<div
-						key={track.id}
-						className={"entry " + (track.playing ? "playing" : (track.downloaded ? "downloaded" : "")) + (this.state.toBeDeleted.includes(ii) ? " to-be-deleted" : "") + ((this.state.disable ? this.state.disabled.includes(ii) : track.disabled) ? " disabled" : "") + ((!this.state.showDisabled && track.disabled ? " hidden" : "")) + (getViewingTrack()?.track.id === track.id ? " viewing" : "")}
-						style={track.downloading && !this.state.toBeDeleted.includes(ii) && (track.disabled || this.state.disabled.includes(ii)) ? { animationName: "downloading", animationIterationCount: "infinite", animationDuration: "2s" } : {}}
-						onClick={() => {
-							if (this.state.disable) this.toggleDisabled(ii);
-							else if (this.state.remove) this.toggleToBeDeleted(ii);
-							else this.requestPlay(track.id)
-						}}
-						onContextMenu={() => {
-							const viewing = getViewingTrack();
-							if (!viewing || viewing.track.id !== track.id) setViewingTrack({ queue: this.state.viewing, track });
-							else setViewingTrack(undefined);
-							window.dispatchEvent(new Event("update-viewing-track"));
-							this.forceUpdate();
-						}}
-					>
-						<h2>{track.title}</h2>
-						<div className="flex v-center">
-							<h3>#{ii + 1} / {trackType[track.type]}</h3>
-							{[0, 3].includes(track.type) && <img src={track.thumbnail} />}
-						</div>
-					</div>
-				);
-			}
 			const downloading = this.state.queues.get(this.state.viewing).some(t => t.downloading);
 			return <div className='flex-child blurry'>
-				<h1 className="clickable" onClick={() => this.resetViewing()}>{"<"} {this.state.viewing}</h1>
+				<div className="flex v-center">
+					<img src={informationSvg} className="clickable" onClick={() => this.toggleHelp()} />
+					<img src={settingsSvg} className="clickable" onClick={() => this.toggleSettings()} />
+					<h1 className="clickable" onClick={() => this.resetViewing()}>{"<"} {this.state.viewing}</h1>
+				</div>
 				<div className="flex">
 					<input type="text" className="add-track" style={{ flex: 3 }} placeholder="Soundtrack URL..." value={this.state.newUrl} onChange={e => this.setNewUrl(e.target.value)} onKeyUp={event => this.urlKeyUp(event)} />
 					<div className={"add-track flex-option " + (this.state.waitingFiles ? "disabled" : "")} style={{ flex: 1 }} onClick={() => this.requestChooseFile()}>Local File(s)</div>
@@ -245,20 +294,15 @@ export default class ListComponent extends React.Component {
 					onChange={({ oldIndex, newIndex }) => this.changePos(oldIndex, newIndex)}
 					renderList={({ children, props }) => <ul className="hidden" {...props}>{children}</ul>}
 					renderItem={({ value: track, props, index }) => <li className="hidden" {...props}>
-						<div
-							key={track.id}
-							className={"entry" + (track.playing ? " playing" : (track.downloaded ? " downloaded" : "")) + (this.state.toBeDeleted.includes(index) ? " to-be-deleted" : "") + (track.disabled || this.state.disabled.includes(index) ? " disabled" : "") + ((!this.state.showDisabled && track.disabled ? " hidden" : "")) + (getViewingTrack()?.track.id === track.id ? " viewing" : "")}
-							style={track.downloading && !this.state.toBeDeleted.includes(index) && (track.disabled || this.state.disabled.includes(index)) ? { animationName: "downloading", animationIterationCount: "infinite", animationDuration: "2s" } : {}}
-						>
-							<h2>{track.title}</h2>
-							<div className="flex v-center">
-								<h3>#{index + 1} / {trackType[track.type]}</h3>
-								{[0, 3].includes(track.type) && <img src={track.thumbnail} />}
-							</div>
-						</div>
+						{this.getTrackEntry(track, index)}
 					</li>}
 				/>}
-				{!this.state.rearrange && entries}
+				{!this.state.rearrange && this.state.queues.get(this.state.viewing).map((t, ii) => this.getTrackEntry(t, ii))}
+				{this.state.showHelp && <InformationComponent onClick={() => this.toggleHelp()} />}
+				{this.state.showSettings && <div className="overlay flex">
+					<div className="close-button" onClick={() => this.toggleSettings()}>x</div>
+					<SettingsComponent />
+				</div>}
 			</div>
 		}
 	}

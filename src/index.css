@@ -136,6 +136,18 @@ h3 {
   cursor: pointer;
 }
 
+img.clickable {
+  transition: all .25s ease;
+  margin-right: 1rem;
+  max-height: 3rem;
+}
+
+img.clickable:hover {
+  text-decoration: none;
+  filter: brightness(80%);
+  transform: rotate(30deg);
+}
+
 .entry.disabled {
   background-color: #00557f;
 }
@@ -286,12 +298,12 @@ div.hidden {
   display: none;
 }
 
-.markdown {
+.in-overlay {
   margin: 5rem;
   width: calc(100% - 10rem);
 }
 
-.markdown img {
+.in-overlay img {
   width: 100%;
 }
 
@@ -322,4 +334,32 @@ div.hidden {
 .close-button:hover {
   filter: brightness(80%);
   cursor: pointer;
+}
+
+.settings {
+  font-size: 1.5rem;
+}
+
+.settings input[type="checkbox"] {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.settings input[type="text"] {
+  font-family: Preahvihear, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-size: 1rem;
+  margin: .25rem;
+  padding: .125rem;
+  border-radius: .25rem;
+  border-width: .125rem;
+  border-color: transparent;
+  border-style: solid;
+}
+
+.settings input[type="text"]:focus {
+  border-color: #e5ae0a;
+}
+
+.settings input[type="text"]:focus-within {
+  outline: none;
 }
