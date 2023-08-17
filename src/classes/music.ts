@@ -25,5 +25,5 @@ export type RuntimeSoundTrack = SoundTrack & {
 	id: string;
 	downloading: boolean;
 	downloaded: boolean;
-	playing: boolean;
+	randomDisabled?: boolean;
 }

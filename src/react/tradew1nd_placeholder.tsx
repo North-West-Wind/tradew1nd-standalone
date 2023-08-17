@@ -1,7 +1,5 @@
 import React from "react";
 import img from "../../public/images/tradew1nd.png";
-import { ReactMarkdown } from "react-markdown/lib/react-markdown";
-import remarkGfm from "remark-gfm";
 import InformationComponent from "./information";
 
 export default class TradeW1ndPlaceholderComponent extends React.Component {

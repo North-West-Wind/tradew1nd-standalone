@@ -15,7 +15,7 @@ import Throttle from "throttle";
 type PlayerEvents = "play" | "finish";
 type PlaybackEvents = "pause" | "paused" | "resume" | "resumed";
 
-export declare interface TradeW1ndPlayer {
+export declare interface TradeW1ndPlayerEmitter {
 	on(event: PlayerEvents, listener: (id: string) => void): this;
 	on(event: PlaybackEvents, listener: () => void): this;
 	on(event: "volume", listener: (volume: number) => void): this;
@@ -30,7 +30,7 @@ export declare interface TradeW1ndPlayer {
 	once(event: string, listener: () => void): this;
 }
 
-export class TradeW1ndPlayer extends EventEmitter {
+export class TradeW1ndPlayer extends EventEmitter implements TradeW1ndPlayerEmitter {
 	static readonly BITRATE = 192000;
 
 	// Internal

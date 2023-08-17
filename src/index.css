@@ -248,22 +248,15 @@ img.clickable:hover {
 }
 
 .add-track {
-  font-family: Preahvihear, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   width: 100%;
   margin: .5rem;
   padding: .5rem;
   border-radius: .5rem;
   border-width: .25rem;
-  border-color: transparent;
-  border-style: solid;
 }
 
 .add-track:focus {
   border-color: #59cc32;
-}
-
-.add-track:focus-visible {
-  outline: none;
 }
 
 div.add-track {
@@ -352,14 +345,22 @@ div.hidden {
   padding: .125rem;
   border-radius: .25rem;
   border-width: .125rem;
-  border-color: transparent;
-  border-style: solid;
+  width: fit-content;
 }
 
 .settings input[type="text"]:focus {
   border-color: #e5ae0a;
 }
 
-.settings input[type="text"]:focus-within {
+input[type="text"] {
+  font-family: Preahvihear, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  border-color: transparent;
+  border-style: solid;
+  background-color: rgba(0, 0, 0, 0.6);
+  transition: all .25s ease;
+  color: white;
+}
+
+input[type="text"]:focus-within {
   outline: none;
 }

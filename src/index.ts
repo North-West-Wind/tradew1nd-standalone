@@ -107,7 +107,6 @@ const createWindow = () => {
 
 function readQueues(file?: string) {
   const downloaded = fs.readdirSync(downloadPath);
-  const playing = getPlaying();
   if (file) {
     file = path.basename(file);
     if (!file.endsWith(".json")) return;
@@ -119,7 +118,6 @@ function readQueues(file?: string) {
       needFix = fixTrack(track) || needFix;
       const rtTrack = <RuntimeSoundTrack> track;
       if (downloaded.find(d => d === track.id)) rtTrack.downloaded = true;
-      if (playing?.queue === file.slice(0, -5) && playing.id === track.id) rtTrack.playing = true;
       rtTracks.push(rtTrack);
     }
     setQueue(file.slice(0, -5), rtTracks);
@@ -134,7 +132,6 @@ function readQueues(file?: string) {
         needFix = fixTrack(track) || needFix;
         const rtTrack = <RuntimeSoundTrack> track;
         if (downloaded.find(d => d === track.id)) rtTrack.downloaded = true;
-        if (playing?.queue === file.slice(0, -5) && playing.id === track.id) rtTrack.playing = true;
         rtTracks.push(rtTrack);
       }
       addQueues({ name: file.slice(0, -5), tracks: rtTracks });
@@ -205,6 +202,7 @@ const setupEvents = () => {
     currentRequestId = requestId;
     const tracks = getQueues().get(queue);
     if (!tracks) return;
+    tracks.map(t => ({ ...t, randomDisabled: false }));
     async function play(id: string) {
       const track = tracks.find(t => t.id === id);
       if (!track) return;
@@ -236,12 +234,9 @@ const setupEvents = () => {
 
       player.once("play", playerId => {
         if (track.id !== playerId) return;
-        track.playing = true;
-        event.sender.send("update-queues", getQueues());
         event.sender.send("update-states", { playing: setPlaying({ queue, id }) });
       }).once("finish", playerId => {
         if (track.id !== playerId && playerId) return;
-        track.playing = false;
         if (track.volume !== beforeVolume) saveRuntimeToQueue(queue);
         else event.sender.send("update-queues", getQueues());
   
@@ -250,13 +245,17 @@ const setupEvents = () => {
         if (player.repeat) return play(track.id);
         if (player.autoplay) {
           // Update tracks variable
-          const tracks = getQueues().get(queue)?.filter(t => !t.disabled);
+          let tracks = getQueues().get(queue)?.filter(t => !t.disabled);
           if (!tracks) return;
           const thisTrack = tracks.find(t => t.id === track.id);
           const index = tracks.indexOf(thisTrack);
           let id: string;
-          if (player.random) id = tracks[Math.floor(tracks.length * Math.random())].id; // Choose random track
-          else {
+          if (player.random) {
+            thisTrack.randomDisabled = true;
+            if (tracks.every(t => t.randomDisabled)) tracks = tracks.map(t => ({ ...t, randomDisabled: false }));
+            tracks = tracks.filter(t => !t.disabled && !t.randomDisabled);
+            id = tracks[Math.floor(tracks.length * Math.random())].id; // Choose random track
+          } else {
             if (index == tracks.length - 1) {
               if (player.loop) id = tracks[0].id;
               else return;

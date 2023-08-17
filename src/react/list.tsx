@@ -2,7 +2,7 @@ import React from "react";
 import { RuntimeSoundTrack, trackType } from "../classes/music";
 import { WindowExtra } from "../classes/window";
 import { List } from "react-movable";
-import { getViewingTrack, setViewingTrack } from "../state";
+import { getPlaying, getViewingTrack, setViewingTrack } from "../state";
 import settingsSvg from "../../public/images/settings.svg";
 import SettingsComponent from "./settings";
 import informationSvg from "../../public/images/information.svg";
@@ -185,7 +185,9 @@ export default class ListComponent extends React.Component {
 		if (this.state.showState) {
 			if (this.state.toBeDeleted.includes(ii)) addedText = "Will be deleted";
 			else if ((this.state.disable ? this.state.disabled.includes(ii) : track.disabled)) addedText = "Disabled";
-			else if (track.playing) addedText = "Playing";
+			else if (getPlaying()?.id === track.id) addedText = "Playing";
+			else if (track.downloaded) addedText = "Downloaded";
+			else if (track.downloading) addedText = "Downloading";
 			if (getViewingTrack()?.track.id === track.id) {
 				if (addedText) addedText += " / Viewing";
 				else addedText = "Viewing";
@@ -193,7 +195,7 @@ export default class ListComponent extends React.Component {
 		}
 		return <div
 			key={track.id}
-			className={"entry " + (track.playing ? "playing" : (track.downloaded ? "downloaded" : "")) + (this.state.toBeDeleted.includes(ii) ? " to-be-deleted" : "") + ((this.state.disable ? this.state.disabled.includes(ii) : track.disabled) ? " disabled" : "") + ((!this.state.showDisabled && track.disabled ? " hidden" : "")) + (getViewingTrack()?.track.id === track.id ? " viewing" : "")}
+			className={"entry " + (getPlaying()?.id === track.id ? "playing" : (track.downloaded ? "downloaded" : "")) + (this.state.toBeDeleted.includes(ii) ? " to-be-deleted" : "") + ((this.state.disable ? this.state.disabled.includes(ii) : track.disabled) ? " disabled" : "") + ((!this.state.showDisabled && track.disabled ? " hidden" : "")) + (getViewingTrack()?.track.id === track.id ? " viewing" : "")}
 			style={track.downloading && !this.state.toBeDeleted.includes(ii) && (track.disabled || this.state.disabled.includes(ii)) ? { animationName: "downloading", animationIterationCount: "infinite", animationDuration: "2s" } : {}}
 			onClick={() => {
 				if (this.state.disable) this.toggleDisabled(ii);
@@ -224,14 +226,14 @@ export default class ListComponent extends React.Component {
 				let addedText: string = undefined;
 				if (this.state.showState) {
 					if (this.state.toBeDeleted.includes(name)) addedText = "Will be deleted";
-					else if (tracks.some(t => t.playing)) addedText = "Playing";
+					else if (getPlaying()?.queue === name) addedText = "Playing";
 				}
 				entries.push(
 					<div
 						key={name}
-						className={"entry" + (tracks.some(t => t.playing) ? " playing" : (tracks.every(t => t.downloaded) ? " downloaded" : "")) + (this.state.toBeDeleted.includes(name) ? " to-be-deleted" : "")}
+						className={"entry" + (getPlaying()?.queue === name ? " playing" : (tracks.every(t => t.downloaded) ? " downloaded" : "")) + (this.state.toBeDeleted.includes(name) ? " to-be-deleted" : "")}
 						onClick={() => this.state.duplicate ? this.requestDuplicate(name) : (this.state.remove ? this.toggleToBeDeleted(name) : this.setViewing(name))}
-						style={tracks.some(t => t.downloading) && !tracks.some(t => t.playing) && !this.state.toBeDeleted.includes(name) ? { animationName: "downloading", animationIterationCount: "infinite", animationDuration: "2s" } : {}}
+						style={tracks.some(t => t.downloading) && getPlaying()?.queue !== name && !this.state.toBeDeleted.includes(name) ? { animationName: "downloading", animationIterationCount: "infinite", animationDuration: "2s" } : {}}
 					>
 						<h2>{name}</h2>
 						<h3>Tracks: {tracks.length}</h3>

@@ -2861,7 +2861,7 @@
   "resolved" "https://registry.npmjs.org/electron-to-chromium/-/electron-to-chromium-1.4.488.tgz"
   "version" "1.4.488"
 
-"electron-winstaller@^5.0.0":
+"electron-winstaller@^5.0.0", "electron-winstaller@^5.1.0":
   "integrity" "sha512-4wlZzkUm5cJNiOtp5wL804+QpygdKTKkrZJXA3sSDEI2XnCVPv0kxmxUvVw4KHBwbNS+Yox89agEr+VkR7kxww=="
   "resolved" "https://registry.npmjs.org/electron-winstaller/-/electron-winstaller-5.1.0.tgz"
   "version" "5.1.0"
