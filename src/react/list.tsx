@@ -2,7 +2,7 @@ import React from "react";
 import { RuntimeSoundTrack, trackType } from "../classes/music";
 import { WindowExtra } from "../classes/window";
 import { List } from "react-movable";
-import { getPlaying, getViewingTrack, setViewingTrack } from "../state";
+import { getPlaying, getViewingTrack, getExporting, setViewingTrack } from "../state";
 import settingsSvg from "../../public/images/settings.svg";
 import SettingsComponent from "./settings";
 import informationSvg from "../../public/images/information.svg";
@@ -25,7 +25,8 @@ export default class ListComponent extends React.Component {
 		showDisabled: boolean,
 		showState: boolean,
 		showHelp: boolean,
-		showSettings: boolean
+		showSettings: boolean,
+		expanded: boolean
 	};
 
 	myRef = React.createRef<HTMLHeadingElement>();
@@ -48,7 +49,8 @@ export default class ListComponent extends React.Component {
 			showDisabled: true,
 			showState: false,
 			showHelp: false,
-			showSettings: false
+			showSettings: false,
+			expanded: false
 		};
 
 		(window as WindowExtra).electronAPI.onUpdateQueues(queues => {
@@ -180,6 +182,15 @@ export default class ListComponent extends React.Component {
 		this.setState({ showSettings: !this.state.showSettings });
 	}
 
+	toggleExpanded() {
+		this.setState({ expanded: !this.state.expanded });
+	}
+
+	requestExportQueue() {
+		if (!this.state.viewing) return;
+		(window as WindowExtra).electronAPI.requestExportQueue(this.state.viewing, this.state.showDisabled);
+	}
+
 	getTrackEntry(track: RuntimeSoundTrack, ii: number) {
 		let addedText: string = undefined;
 		if (this.state.showState) {
@@ -263,6 +274,7 @@ export default class ListComponent extends React.Component {
 			</div>
 		} else {
 			const downloading = this.state.queues.get(this.state.viewing).some(t => t.downloading);
+			const exporting = getExporting();
 			return <div className='flex-child blurry'>
 				<div className="flex v-center">
 					<img src={informationSvg} className="clickable" onClick={() => this.toggleHelp()} />
@@ -273,24 +285,35 @@ export default class ListComponent extends React.Component {
 					<input type="text" className="add-track" style={{ flex: 3 }} placeholder="Soundtrack URL..." value={this.state.newUrl} onChange={e => this.setNewUrl(e.target.value)} onKeyUp={event => this.urlKeyUp(event)} />
 					<div className={"add-track flex-option " + (this.state.waitingFiles ? "disabled" : "")} style={{ flex: 1 }} onClick={() => this.requestChooseFile()}>Local File(s)</div>
 				</div>
-				<div className="flex">
-					<div className="flex-button" style={{ backgroundColor: downloading ? "#444444" : "#43b1fc" }} onClick={() => !downloading && this.requestQueueDownload()}>{!downloading ? "Download" : "Cancel"}</div>
-					<div className="flex-button" style={{ backgroundColor: downloading ? "#444444" : "#2dccbf" }} onClick={() => !downloading && this.requestPlay(this.state.queues.get(this.state.viewing)[0].id)}>Play</div>
-					<div className="flex-button" style={{ backgroundColor: downloading ? "#444444" : "#59cc32" }} onClick={() => {
-						if (downloading) return;
-						const tracks = this.state.queues.get(this.state.viewing);
-						this.requestPlay(tracks[Math.floor(Math.random() * tracks.length)].id);
-					}}>Play Random</div>
-				</div>
 				<div className="flex center">
-					<div className={"flex-option " + (!this.state.showDisabled ? "disabled" : "")} onClick={() => this.toggleShowDisabled()}>Show Disabled</div>
-					<div className={"flex-option red"} onClick={() => this.removeDisabled()}>Remove Disabled</div>
+					<div className={"flex-option " + (!this.state.expanded ? "unimportant" : "")} onClick={() => this.toggleExpanded()}>{this.state.expanded ? "▼" : "▲"}</div>
 				</div>
-				<div className="flex center" style={{ marginBottom: ".5rem" }}>
-					<div className={"flex-option unimportant " + (!this.state.disable ? "disabled" : "")} onClick={() => this.toggleDisable()}>Disable</div>
-					<div className={"flex-option " + (!this.state.rearrange ? "disabled" : "")} onClick={() => this.toggleRearrange()}>Rearrange</div>
-					<div className={"flex-option red " + (!this.state.remove ? "disabled" : "")} onClick={() => this.toggleRemove()}>Remove</div>
-				</div>
+				{
+					this.state.expanded &&
+					<>
+						<div className="flex">
+							<div className="flex-button" style={{ backgroundColor: downloading ? "#4f4f4f" : "#43b1fc" }} onClick={() => !downloading && this.requestQueueDownload()}>{!downloading ? "Download" : "Cancel"}</div>
+							<div className="flex-button" style={{ backgroundColor: downloading ? "#4f4f4f" : "#2dccbf" }} onClick={() => !downloading && this.requestPlay(this.state.queues.get(this.state.viewing)[0].id)}>Play</div>
+							<div className="flex-button" style={{ backgroundColor: downloading ? "#4f4f4f" : "#59cc32" }} onClick={() => {
+								if (downloading) return;
+								const tracks = this.state.queues.get(this.state.viewing);
+								this.requestPlay(tracks[Math.floor(Math.random() * tracks.length)].id);
+							}}>Play Random</div>
+						</div>
+						<div className="flex center">
+							<div className={"flex-option " + (!this.state.showDisabled ? "disabled" : "")} onClick={() => this.toggleShowDisabled()}>Show Disabled</div>
+							<div className={"flex-option red"} onClick={() => this.removeDisabled()}>Remove Disabled</div>
+						</div>
+						<div className="flex center">
+							<div className={"flex-option unimportant " + (!this.state.disable ? "disabled" : "")} onClick={() => this.toggleDisable()}>Disable</div>
+							<div className={"flex-option " + (!this.state.rearrange ? "disabled" : "")} onClick={() => this.toggleRearrange()}>Rearrange</div>
+							<div className={"flex-option red " + (!this.state.remove ? "disabled" : "")} onClick={() => this.toggleRemove()}>Remove</div>
+						</div>
+						<div className="flex center">
+							<div className="flex-option" onClick={() => !exporting && this.requestExportQueue()} style={{ backgroundColor: exporting ? "#4f4f4f" : "#2dccbf" }}>{exporting ? `Exporting... (${Math.round(exporting.prog * 100 / exporting.max)}%)` : "Export"}</div>
+						</div>
+					</>
+				}
 				{this.state.rearrange && <List
 					values={this.state.queues.get(this.state.viewing)}
 					onChange={({ oldIndex, newIndex }) => this.changePos(oldIndex, newIndex)}

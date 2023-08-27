@@ -1,7 +1,7 @@
 {
   "name": "tradew1nd-standalone",
   "productName": "tradew1nd-standalone",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "TradeW1nd desktop music player",
   "main": ".webpack/main",
   "scripts": {
@@ -23,6 +23,7 @@
     "@electron-forge/plugin-auto-unpack-natives": "^6.3.0",
     "@electron-forge/plugin-webpack": "^6.3.0",
     "@electron-forge/publisher-github": "^6.3.0",
+    "@types/adm-zip": "^0.5.0",
     "@types/electron-json-storage": "^4.5.0",
     "@types/moment-duration-format": "^2.2.3",
     "@types/react": "^18.2.20",
@@ -47,6 +48,7 @@
   },
   "dependencies": {
     "@vncsprd/soundcloud-downloader": "^1.2.2",
+    "adm-zip": "^0.5.10",
     "chokidar": "^3.5.3",
     "electron-json-storage": "^4.6.0",
     "electron-serve": "^1.1.0",
@@ -69,6 +71,7 @@
     "react-markdown": "^8.0.7",
     "react-movable": "^3.0.4",
     "remark-gfm": "^3.0.1",
+    "sanitize-filename": "^1.6.3",
     "speaker": "^0.5.4",
     "throttle": "^1.0.3",
     "trash": "^8.1.1",

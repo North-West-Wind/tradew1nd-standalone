@@ -6,7 +6,7 @@ import puppeteer from 'puppeteer-core';
 import pie from "puppeteer-in-electron";
 import trayIcon from "../public/images/tradew1nd-icon.png";
 import winIcon from "../public/images/tradew1nd-win.png";
-import { addQueues, clearQueues, getQueues, getDownloading, setBrowser, setDataPath, setDownloadPath, setQueuePath, setMainWindow, getMainWindow, setPlaying, getPlaying, getQueuePath, delQueue, setQueue } from './state';
+import { addQueues, clearQueues, getQueues, getDownloading, setBrowser, setDataPath, setDownloadPath, setQueuePath, setMainWindow, getMainWindow, setPlaying, getPlaying, getQueuePath, delQueue, setQueue, getDownloadPath, setExporting, getExporting } from './state';
 import { watch } from 'chokidar';
 import { RuntimeSoundTrack, SoundTrack } from './classes/music';
 import { addTrack, downloadTrack } from './helpers/downloader';
@@ -16,6 +16,11 @@ import { clamp, isBetween } from "./helpers/misc";
 import ElectronStore from "electron-store";
 import trash from "trash";
 import getDuplicateName from "get-duplicate-name";
+import AdmZip from "adm-zip";
+import { parseFile } from "music-metadata";
+import moment from "moment";
+import { FFmpeg } from "prism-media";
+import sanitize from "sanitize-filename";
 
 // Path setup
 const dataPath = setDataPath(app.getPath("userData"));
@@ -191,7 +196,7 @@ const setupEvents = () => {
   });
 
   ipcMain.on("request-states", (event) => {
-    event.sender.send("update-states", { downloading: getDownloading(), playing: getPlaying() });
+    event.sender.send("update-states", { downloading: getDownloading(), playing: getPlaying(), exporting: getExporting() });
     event.sender.send("update-options", { autoplay: player.autoplay, random: player.random, loop: player.loop, repeat: player.repeat });
     event.sender.send("update-paused", (player.togglingPause && !player.paused) || player.paused);
     event.sender.send("update-volume", player.volume);
@@ -339,6 +344,49 @@ const setupEvents = () => {
   ipcMain.on("request-reload-queues", () => readQueues());
 
   ipcMain.on("request-client-settings", (event) => event.sender.send("update-client-settings", clientSettings));
+
+  ipcMain.on("request-export-queue", async (event, queue: string, addDisabled: boolean) => {
+    const tracks = getQueues().get(queue);
+    if (!tracks) return;
+    const result = await dialog.showSaveDialog({ properties: ["showHiddenFiles", "showOverwriteConfirmation"], message: "Save the ZIP file to...", filters: [{ extensions: ["zip"], name: "ZIP File" }], defaultPath: "queue.zip" });
+    if (result.canceled) return;
+    let filePath = result.filePath;
+    if (!filePath.endsWith(".zip")) filePath += ".zip";
+    const zip = new AdmZip();
+    const tmpPath = path.resolve(dataPath, "tmp");
+    if (!fs.existsSync(tmpPath)) fs.mkdirSync(tmpPath);
+    event.sender.send("update-states", { exporting: setExporting({ prog: 0, max: tracks.length }) });
+    for (const track of tracks) {
+      event.sender.send("update-states", { exporting: setExporting({ prog: getExporting().prog + 1, max: getExporting().max }) });
+      if (track.disabled && !addDisabled) continue;
+      const file = path.resolve(downloadPath, track.id);
+      if (!fs.existsSync(file)) continue;
+      const metadata = await parseFile(file);
+      const args = [
+        '-analyzeduration', '0',
+        '-loglevel', '0',
+        '-f', 'ogg',
+        '-ar', `${metadata.format?.sampleRate || 44100}`,
+        '-ac', `${metadata.format?.numberOfChannels || 2}`
+      ];
+      const transcoder = new FFmpeg({ args });
+      const buffer = await new Promise<Buffer>(res => {
+        const ogg = path.resolve(tmpPath, `${track.id}.ogg`);
+        fs.createReadStream(file)
+          .on("error", err => console.error(track.title, "Read stream error", err))
+          .pipe(transcoder)
+          .on("error", err => console.error(track.title, "Transcoder error", err))
+          .pipe(fs.createWriteStream(ogg))
+          .on("error", err => console.error(track.title, "Write stream error", err))
+          .on("close", () => res(fs.readFileSync(ogg)));
+      });
+      zip.addFile(`${sanitize(track.title)}.ogg`, buffer);
+    }
+
+    await zip.writeZipPromise(filePath);
+    event.sender.send("update-states", { exporting: setExporting(null) });
+    fs.rmSync(tmpPath, { recursive: true });
+  });
 
   ipcMain.on("set-options", (event, options: { autoplay?: boolean, random?: boolean, loop?: boolean, repeat?: boolean }) => {
     event.sender.send("update-options", options);

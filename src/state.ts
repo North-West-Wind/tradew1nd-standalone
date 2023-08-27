@@ -48,6 +48,10 @@ let adding: string | RuntimeSoundTrack | number | undefined;
 export function getAdding() { return adding; }
 export function setAdding(a: string | RuntimeSoundTrack | number | undefined) { return adding = a; }
 
+let exporting: { prog: number, max: number };
+export function getExporting() { return exporting; }
+export function setExporting(e: { prog: number, max: number }) { return exporting = e; }
+
 // Renderer only
 let viewingTrack: { queue: string, track: RuntimeSoundTrack };
 export function getViewingTrack() { return viewingTrack; }

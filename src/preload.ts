@@ -6,7 +6,7 @@ import { RuntimeSoundTrack, SoundTrack } from "./classes/music";
 
 contextBridge.exposeInMainWorld("electronAPI", {
 	onUpdateQueues: (callback: ((queues: Map<string, SoundTrack[]>) => void)) => ipcRenderer.on("update-queues", (_e, q) => callback(q)),
-	onUpdateStates: (callback: ((states: { downloading: string[] }) => void)) => ipcRenderer.on("update-states", (_e, s) => callback(s)),
+	onUpdateStates: (callback: ((states: { downloading: string[], playing?: { queue: string, id: string }, exporting?: { prog: number, max: number } }) => void)) => ipcRenderer.on("update-states", (_e, s) => callback(s)),
 	onUpdateOptions: (callback: ((options: { autoplay?: boolean, random?: boolean, loop?: boolean, repeat?: boolean }) => void)) => ipcRenderer.on("update-options", (_e, o) => callback(o)),
 	onUpdatePaused: (callback: ((paused: boolean) => void)) => ipcRenderer.on("update-paused", (_e, p) => callback(p)),
 	onUpdateVolume: (callback: ((volume: number) => void)) => ipcRenderer.on("update-volume", (_e, v) => callback(v)),
@@ -28,6 +28,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	requestDisable: (queue: string, indices: number[]) => ipcRenderer.send("request-disable", queue, indices),
 	requestReloadQueues: () => ipcRenderer.send("request-reload-queues"),
 	requestClientSettings: () => ipcRenderer.send("request-client-settings"),
+	requestExportQueue: (queue: string, addDisabled: boolean) => ipcRenderer.send("request-export-queue", queue, addDisabled),
 	returnChooseFile: (callback: ((paths: undefined | string[]) => void)) => ipcRenderer.on("return-choose-file", (_e, p) => callback(p)),
 	setOptions: (options: { autoplay?: boolean, random?: boolean, loop?: boolean, repeat?: boolean }) => ipcRenderer.send("set-options", options),
 	setPaused: (paused: boolean) => ipcRenderer.send("set-paused", paused),

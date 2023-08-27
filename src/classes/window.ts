@@ -2,7 +2,7 @@ import { RuntimeSoundTrack } from "./music"
 
 export type ElectronBridge = {
 	onUpdateQueues: (callback: ((queues: Map<string, RuntimeSoundTrack[]>) => void)) => void,
-	onUpdateStates: (callback: ((states: { downloading?: string[], playing?: { queue: string, id: string } }) => void)) => void,
+	onUpdateStates: (callback: ((states: { downloading?: string[], playing?: { queue: string, id: string }, exporting?: { prog: number, max: number } }) => void)) => void,
 	onUpdateOptions: (callback: ((options: { autoplay?: boolean, random?: boolean, loop?: boolean, repeat?: boolean }) => void)) => void,
 	onUpdatePaused: (callback: ((paused: boolean) => void)) => void,
 	onUpdateVolume: (callback: ((volume: number) => void)) => void,
@@ -24,6 +24,7 @@ export type ElectronBridge = {
 	requestDisable: (queue: string, indices: number[]) => void,
 	requestReloadQueues: () => void,
 	requestClientSettings: () => void,
+	requestExportQueue: (queue: string, addDisabled: boolean) => void,
 	returnChooseFile: (callback: ((paths: undefined | string[]) => void)) => void,
 	setOptions: (options: { autoplay?: boolean, random?: boolean, loop?: boolean, repeat?: boolean }) => void,
 	setPaused: (paused: boolean) => void,

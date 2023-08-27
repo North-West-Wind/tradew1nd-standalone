@@ -2,7 +2,7 @@ import { createRoot } from 'react-dom/client';
 import TrackInfoComponent from './track_info';
 import ListComponent from './list';
 import { WindowExtra } from '../classes/window';
-import { setDownloading, setPlaying, setQueues } from '../state';
+import { setDownloading, setExporting, setPlaying, setQueues } from '../state';
 import PlayerOptionsComponent from './player_options';
 import TrackProgressComponent from './track_progress';
 
@@ -12,6 +12,7 @@ import TrackProgressComponent from './track_progress';
 (window as WindowExtra).electronAPI.onUpdateStates(states => {
 	if (states.downloading !== undefined) setDownloading(states.downloading);
 	if (states.playing !== undefined) setPlaying(states.playing);
+	if (states.exporting !== undefined) setExporting(states.exporting);
 });
 
 const container = document.getElementById('app');
