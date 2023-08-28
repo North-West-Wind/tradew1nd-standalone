@@ -369,6 +369,10 @@ const setupEvents = () => {
         '-ar', `${metadata.format?.sampleRate || 44100}`,
         '-ac', `${metadata.format?.numberOfChannels || 2}`
       ];
+      const start = track.start || 0;
+      const end = track.end || 0;
+      if (start > 0) args.push('-ss', moment.duration(start, "ms").format("HH:mm:ss.SSS"));
+      if (end > 0) args.push("-t", moment.duration(end - start, "ms").format("HH:mm:ss.SSS"));
       const transcoder = new FFmpeg({ args });
       const buffer = await new Promise<Buffer>(res => {
         const ogg = path.resolve(tmpPath, `${track.id}.ogg`);
