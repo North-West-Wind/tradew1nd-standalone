@@ -1,8 +1,8 @@
 import * as fs from "fs";
 import * as path from "path";
 import { RuntimeSoundTrack, SoundTrack } from "../classes/music";
-import { getDownloadPath, getQueues } from "../state";
-import ytdl, { videoInfo } from "ytdl-core";
+import { getDataPath, getDownloadPath, getQueues } from "../state";
+import ytdl, { videoInfo } from "@distube/ytdl-core";
 import fetch from "node-fetch";
 import { ActualError, StatusError } from "../classes/error";
 import { SCDL } from "@vncsprd/soundcloud-downloader";
@@ -25,7 +25,7 @@ export async function downloadTrack(track: SoundTrack) {
 		// YouTube
 		case 0:
 		case 1:
-			await new Promise((res, rej) => ytdl(track.url, { filter: "audioonly" }).on("error", rej).pipe(writeStream).on("close", res).on("error", rej));
+			await new Promise((res, rej) => ytdl(track.url, { filter: "audioonly", agent: getYtdlAgent() }).on("error", rej).pipe(writeStream).on("close", res).on("error", rej));
 			break;
 		// URL / Google Drive
 		case 2:
@@ -47,7 +47,7 @@ export async function downloadTrack(track: SoundTrack) {
 			if (c.error) throw new Error(c.message);
 			if (c.url.startsWith("https://www.youtube.com/embed/")) {
 				const ytid = c.url.split("/").slice(-1)[0].split("?")[0];
-				await new Promise((res, rej) => ytdl(`https://www.youtube.com/watch?v=${ytid}`, { filter: "audioonly" }).pipe(writeStream).on("close", res).on("error", rej));
+				await new Promise((res, rej) => ytdl(`https://www.youtube.com/watch?v=${ytid}`, { filter: "audioonly", agent: getYtdlAgent() }).pipe(writeStream).on("close", res).on("error", rej));
 			} else {
 				const response = await fetch(c.url);
 				if (!response.ok) throw new StatusError(response.status);
@@ -134,7 +134,7 @@ async function addYTPlaylist(link: string) {
 async function addYTURL(link: string, type = 0) {
 	let songInfo: videoInfo;
 	try {
-		songInfo = await ytdl.getInfo(link);
+		songInfo = await ytdl.getInfo(link, { agent: getYtdlAgent() });
 	} catch (err) {
 		console.error(err);
 		return undefined;
@@ -260,4 +260,12 @@ async function addFile(url: string) {
 		thumbnail: "https://www.dropbox.com/s/ms27gzjcz4c3h3z/audio-x-generic.svg?dl=1"
 	};
 	return [song];
+}
+
+function getYtdlAgent() {
+	// There exists YouTube cookies.txt
+	const cookiePath = path.join(getDataPath(), "cookies", "youtube.json");
+	if (fs.existsSync(cookiePath))
+		return ytdl.createAgent(JSON.parse(fs.readFileSync(cookiePath, { encoding: "utf8" })));
+	return undefined;
 }
