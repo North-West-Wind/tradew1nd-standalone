@@ -5,7 +5,13 @@ import { rules } from './webpack.rules';
 
 const optionalPlugins: any[] = [];
 if (process.platform !== "darwin") { // don't ignore on OSX
-  optionalPlugins.push(new IgnorePlugin({ resourceRegExp: /readable-stream\/transform/ }));
+  optionalPlugins.push(
+    new IgnorePlugin({ resourceRegExp: /readable-stream\/transform/ }),
+    new IgnorePlugin({ resourceRegExp: /^fsevents$/ }),
+    new IgnorePlugin({ resourceRegExp: /^deasync$/ }),
+    new IgnorePlugin({ resourceRegExp: /^bufferutil$/ }),
+    new IgnorePlugin({ resourceRegExp: /^utf-8-validate$/ }),
+  );
 }
 
 export const mainConfig: Configuration = {

@@ -43,7 +43,7 @@ export class TradeW1ndPlayer extends EventEmitter implements TradeW1ndPlayerEmit
 	private startPausedTime = 0;
 	private metadata: IAudioMetadata;
 	private updatePlayback = false;
-	private interval: NodeJS.Timer;
+	private interval: NodeJS.Timeout;
 
 	// Should change with setter
 	playing = false;
