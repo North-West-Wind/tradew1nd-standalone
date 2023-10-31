@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	onUpdateClientSettings: (callback: ((settings: { showDisabled?: boolean, showState?: boolean, exitOnClose?: boolean }) => void)) => ipcRenderer.on("update-client-settings", (_e, s) => callback(s)),
 	requestQueues: () => ipcRenderer.send("request-queues"),
 	requestQueueDownload: (queue: string) => ipcRenderer.send("request-queue-download", queue),
+	requestStopDownload: () => ipcRenderer.send("request-stop-download"),
 	requestStates: () => ipcRenderer.send("request-states"),
 	requestPlay: (queue: string, id: string, seek?: number) => ipcRenderer.send("request-play", queue, id, seek),
 	requestStop: () => ipcRenderer.send("request-stop"),

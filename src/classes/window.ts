@@ -12,6 +12,7 @@ export type ElectronBridge = {
 	onUpdateClientSettings: (callback: ((settings: { showDisabled?: boolean, showState?: boolean, exitOnClose?: boolean }) => void)) => void,
 	requestQueues: () => void,
 	requestQueueDownload: (queue: string) => void,
+	requestStopDownload: () => void,
 	requestStates: () => void,
 	requestPlay: (queue: string, id: string, seek?: number) => void,
 	requestStop: () => void,

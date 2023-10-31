@@ -29,6 +29,14 @@ if (!fs.existsSync(queuePath)) fs.mkdirSync(queuePath);
 const downloadPath = setDownloadPath(path.resolve(dataPath, "tracks"));
 if (!fs.existsSync(downloadPath)) fs.mkdirSync(downloadPath);
 
+// Downloaded tracks corruption checker
+{
+  for (const file of fs.readdirSync(downloadPath)) {
+    const stat = fs.statSync(path.join(downloadPath, file));
+    if (stat.size == 0) fs.rmSync(path.join(downloadPath, file));
+  }
+}
+
 // Electron config setup
 const storage = new ElectronStore();
 
@@ -171,6 +179,7 @@ const setupEvents = () => {
     event.sender.send("update-queues", getQueues());
   });
 
+  let stopDownload = false;
   ipcMain.on("request-queue-download", async (event, queue: string) => {
     const tracks = getQueues().get(queue);
     if (!tracks) return;
@@ -179,6 +188,10 @@ const setupEvents = () => {
     const failed: RuntimeSoundTrack[] = [];
     async function downloadFromArray(arr: RuntimeSoundTrack[], retry: boolean) {
       for (const track of arr) {
+        if (stopDownload) {
+          stopDownload = false;
+          break;
+        }
         const file = path.resolve(downloadPath, track.id);
         if (fs.existsSync(file)) continue;
         try {
@@ -206,6 +219,11 @@ const setupEvents = () => {
     }
     getDownloading().splice(getDownloading().indexOf(queue), 1);
     event.sender.send("update-states", { downloading: getDownloading() });
+  });
+
+  ipcMain.on("request-stop-download", (event) => {
+    console.log("Stopping download");
+    stopDownload = true;
   });
 
   ipcMain.on("request-states", (event) => {

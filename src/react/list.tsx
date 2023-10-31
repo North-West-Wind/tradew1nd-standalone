@@ -86,6 +86,10 @@ export default class ListComponent extends React.Component {
 		(window as WindowExtra).electronAPI.requestQueueDownload(queue || this.state.viewing);
 	}
 
+	requestStopDownload() {
+		(window as WindowExtra).electronAPI.requestStopDownload();
+	}
+
 	requestPlay(id: string) {
 		(window as WindowExtra).electronAPI.requestPlay(this.state.viewing, id);
 	}
@@ -191,6 +195,11 @@ export default class ListComponent extends React.Component {
 		(window as WindowExtra).electronAPI.requestExportQueue(this.state.viewing, this.state.showDisabled);
 	}
 
+	onDownloadClicked(downloading: boolean) {
+		if (!downloading) this.requestQueueDownload();
+		else this.requestStopDownload();
+	}
+
 	getTrackEntry(track: RuntimeSoundTrack, ii: number) {
 		let addedText: string = undefined;
 		if (this.state.showState) {
@@ -292,7 +301,7 @@ export default class ListComponent extends React.Component {
 					this.state.expanded &&
 					<>
 						<div className="flex">
-							<div className="flex-button" style={{ backgroundColor: downloading ? "#4f4f4f" : "#43b1fc" }} onClick={() => !downloading && this.requestQueueDownload()}>{!downloading ? "Download" : "Cancel"}</div>
+							<div className="flex-button" style={{ backgroundColor: downloading ? "#eb0400" : "#43b1fc" }} onClick={() => this.onDownloadClicked(downloading)}>{!downloading ? "Download" : "Cancel"}</div>
 							<div className="flex-button" style={{ backgroundColor: downloading ? "#4f4f4f" : "#2dccbf" }} onClick={() => !downloading && this.requestPlay(this.state.queues.get(this.state.viewing)[0].id)}>Play</div>
 							<div className="flex-button" style={{ backgroundColor: downloading ? "#4f4f4f" : "#59cc32" }} onClick={() => {
 								if (downloading) return;
