@@ -13,7 +13,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	onUpdateTime: (callback: ((time: number) => void)) => ipcRenderer.on("update-time", (_e, t) => callback(t)),
 	onUpdateAddingTrack: (callback: (() => void)) => ipcRenderer.on("update-adding-track", () => callback()),
 	onUpdateAddedTrack: (callback: ((result?: RuntimeSoundTrack | number) => void)) => ipcRenderer.on("update-added-track", (_e, r) => callback(r)),
-	onUpdateClientSettings: (callback: ((settings: { showDisabled?: boolean, showState?: boolean }) => void)) => ipcRenderer.on("update-client-settings", (_e, s) => callback(s)),
+	onUpdateClientSettings: (callback: ((settings: { showDisabled?: boolean, showState?: boolean, exitOnClose?: boolean }) => void)) => ipcRenderer.on("update-client-settings", (_e, s) => callback(s)),
 	requestQueues: () => ipcRenderer.send("request-queues"),
 	requestQueueDownload: (queue: string) => ipcRenderer.send("request-queue-download", queue),
 	requestStates: () => ipcRenderer.send("request-states"),

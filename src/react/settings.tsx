@@ -1,13 +1,14 @@
 import React from "react";
+import ReactSwitch from "react-switch";
 import { WindowExtra } from "../classes/window";
 
 export default class SettingsComponent extends React.Component {
-	state: { autoplay: boolean, random: boolean, loop: boolean, repeat: boolean, volume: number, showState: boolean };
+	state: { autoplay: boolean, random: boolean, loop: boolean, repeat: boolean, volume: number, showState: boolean, exitOnClose: boolean };
 
 	constructor(props: object) {
 		super(props);
 
-		this.state = { autoplay: false, random: false, loop: false, repeat: false, volume: 1, showState: false };
+		this.state = { autoplay: false, random: false, loop: false, repeat: false, volume: 1, showState: false, exitOnClose: false };
 		(window as WindowExtra).electronAPI.onUpdateVolume(volume => {
 			this.setState({ volume });
 		});
@@ -22,6 +23,7 @@ export default class SettingsComponent extends React.Component {
 		(window as WindowExtra).electronAPI.requestStates();
 		(window as WindowExtra).electronAPI.onUpdateClientSettings(settings => {
 			if (settings.showState !== undefined) this.setState({ showState: settings.showState });
+			if (settings.exitOnClose !== undefined) this.setState({ exitOnClose: settings.exitOnClose });
 		});
 		(window as WindowExtra).electronAPI.requestClientSettings();
 	}
@@ -64,27 +66,37 @@ export default class SettingsComponent extends React.Component {
 		(window as WindowExtra).electronAPI.setClientSettings({ showState: !this.state.showState });
 	}
 
+	toggleExitOnClose() {
+		(window as WindowExtra).electronAPI.setClientSettings({ exitOnClose: !this.state.exitOnClose });
+	}
+
 	render() {
 		return <div className="in-overlay settings">
+			<h1>Program Options</h1>
+			<div className="flex v-center">
+				<ReactSwitch checked={this.state.exitOnClose} onChange={() => this.toggleExitOnClose()} /><label>Exit when closed</label>
+			</div>
 			<h1>Player Options</h1>
 			<div className="flex v-center">
-				<input type="checkbox" checked={this.state.autoplay} onChange={() => this.toggleAutoplay()} /><label>Autoplay</label>
+				<ReactSwitch checked={this.state.autoplay} onChange={() => this.toggleAutoplay()} /><label>Autoplay</label>
 			</div>
 			<div className="flex v-center">
-				<input type="checkbox" checked={this.state.random} onChange={() => this.toggleRandom()} /><label>Random</label>
+				<ReactSwitch checked={this.state.random} onChange={() => this.toggleRandom()} /><label>Random</label>
 			</div>
 			<div className="flex v-center">
-				<input type="checkbox" checked={this.state.loop} onChange={() => this.toggleLoop()} /><label>Loop</label>
+				<ReactSwitch checked={this.state.loop} onChange={() => this.toggleLoop()} /><label>Loop</label>
 			</div>
 			<div className="flex v-center">
-				<input type="checkbox" checked={this.state.repeat} onChange={() => this.toggleRepeat()} /><label>Repeat</label>
+				<ReactSwitch checked={this.state.repeat} onChange={() => this.toggleRepeat()} /><label>Repeat</label>
 			</div>
 			<div className="flex v-center">
-			<label>Volume: </label><input type="text" value={Math.round(this.state.volume * 100)} onKeyUp={e => e.key === "Enter" && this.actualSetVolume(e.currentTarget.value)} onChange={e => this.setVolume(e.target.value)} />
+				<label>Volume: </label>
+				<input type="text" value={Math.round(this.state.volume * 100)} onKeyUp={e => e.key === "Enter" && this.actualSetVolume(e.currentTarget.value)} onChange={e => this.setVolume(e.target.value)} />
+				<label>%</label>
 			</div>
 			<h1>Accessibility</h1>
 			<div className="flex v-center">
-				<input type="checkbox" checked={this.state.showState} onChange={() => this.toggleShowState()} /><label>Show queue/track state</label>
+				<ReactSwitch checked={this.state.showState} onChange={() => this.toggleShowState()} /><label>Show queue/track state</label>
 			</div>
 		</div>
 	}

@@ -71,6 +71,7 @@
     "react-dom": "^18.2.0",
     "react-markdown": "^9.0.0",
     "react-movable": "^3.0.4",
+    "react-switch": "^7.0.0",
     "remark-gfm": "^4.0.0",
     "sanitize-filename": "^1.6.3",
     "speaker": "^0.5.4",
